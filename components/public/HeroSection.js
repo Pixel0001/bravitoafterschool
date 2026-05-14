@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
-  CodeBracketIcon,
-  CpuChipIcon,
-  GlobeAltIcon,
+  LanguageIcon,
+  CalculatorIcon,
+  AcademicCapIcon,
   SparklesIcon,
   CheckBadgeIcon,
   BookOpenIcon,
@@ -16,10 +16,10 @@ import {
 } from '@heroicons/react/24/outline'
 
 const FALLBACK_COURSES = [
-  { id: 'python', title: 'Python', icon: CodeBracketIcon, color: 'primary' },
-  { id: 'web', title: 'Web Dev', icon: GlobeAltIcon, color: 'accent' },
-  { id: 'ai', title: 'AI & ML', icon: CpuChipIcon, color: 'primary' },
-  { id: 'games', title: 'Jocuri', icon: SparklesIcon, color: 'accent' }
+  { id: 'germana', title: 'Germană', icon: LanguageIcon, color: 'primary' },
+  { id: 'engleza', title: 'Engleză', icon: AcademicCapIcon, color: 'accent' },
+  { id: 'matematica', title: 'Matematică', icon: CalculatorIcon, color: 'primary' },
+  { id: 'franceza', title: 'Franceză', icon: SparklesIcon, color: 'accent' }
 ]
 
 const STATS = [
@@ -31,29 +31,29 @@ const STATS = [
 const BENEFITS = [
   {
     icon: CheckBadgeIcon,
-    title: 'Profesori cu experiență',
-    description: 'Echipă de programatori și pedagogi pasionați, cu peste 5 ani de experiență în IT.',
+    title: 'Profesori Calificați',
+    description: 'Echipa noastră este formată din pedagogi cu experiență și pasiune pentru educația copiilor.',
     colorClass: 'primary'
   },
   {
     icon: BookOpenIcon,
-    title: 'Curriculum modern',
-    description: 'Python, Web și AI prin proiecte reale: jocuri, site-uri și aplicații pe care copiii le pot arăta.',
+    title: 'Curriculum Național',
+    description: 'Programe actualizate care combină teoria cu practica: limbi străine, matematică și multe altele.',
     colorClass: 'accent'
   },
   {
     icon: UserGroupIcon,
-    title: 'Grupe mici',
-    description: 'Maxim 6 elevi pe grupă, atenție individuală și progres garantat pentru fiecare copil.',
+    title: 'Grupe Mici',
+    description: 'Atenție individualizată pentru fiecare copil în grupe de maximum 5 elevi.',
     colorClass: 'primary'
   }
 ]
 
 const STEPS = [
-  { step: '1', title: 'Alege cursul', desc: 'Python, Web Development sau AI — explorează programele potrivite vârstei copilului' },
-  { step: '2', title: 'Lecție de probă GRATUITĂ', desc: 'Vino la prima lecție fără niciun cost și vezi cum funcționează' },
-  { step: '3', title: 'Înscrie-te', desc: 'Te contactăm pentru detalii despre grupă, program și plată' },
-  { step: '4', title: 'Începe aventura', desc: 'Copilul tău participă la cursuri și creează propriile sale proiecte' }
+  { step: '1', title: 'Alege cursul', desc: 'Explorează cursurile disponibile și alege-l pe cel potrivit pentru copilul tău' },
+  { step: '2', title: 'Completează formularul', desc: 'Înscrie-te online în câteva minute — simplu și rapid' },
+  { step: '3', title: 'Confirmă prezența', desc: 'Te contactăm pentru confirmare și detalii despre programul ales' },
+  { step: '4', title: 'Începe aventura', desc: 'Participă la cursuri și bucură-te de învățare alături de prieteni' }
 ]
 
 const Badge = ({ children, pulse = false }) => (
@@ -245,11 +245,11 @@ export default function HeroSection({ initialCourses = [] }) {
 
               <div className="mt-5 pt-5 border-t border-white/10">
                 <Link
-                  href="/learn/guest"
+                  href="/inscriere"
                   className="cursor-pointer w-full py-3 bg-gradient-to-r from-[#f8b316] to-[#e5a310] text-[#231f20] rounded-xl font-bold text-sm hover:from-[#e5a310] hover:to-[#d4940d] transition-all shadow-lg hover:shadow-[#f8b316]/30 flex items-center justify-center gap-2"
                 >
                   <RocketLaunchIcon className="w-5 h-5" />
-                  Deschide aplicația gratuit
+                  Înscrie-te acum
                 </Link>
               </div>
             </div>
@@ -263,7 +263,7 @@ export default function HeroSection({ initialCourses = [] }) {
               De ce să alegi <span className="text-[#f8b316]">Bravito After School</span>?
             </h2>
             <p className="hero-text-muted max-w-2xl mx-auto">
-              Singura academie din Chișinău dedicată exclusiv programării pentru copii
+              Suntem dedicați să oferim cea mai bună experiență educațională pentru copilul tău
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -280,7 +280,7 @@ export default function HeroSection({ initialCourses = [] }) {
               Cum funcționează?
             </h2>
             <p className="hero-text-muted max-w-2xl mx-auto">
-              În doar 4 pași simpli, copilul tău devine un mic programator
+              În doar 4 pași simpli, copilul tău poate începe aventura educațională
             </p>
           </div>
           <div className="grid md:grid-cols-4 gap-6">

@@ -10,7 +10,7 @@ import Footer from '@/components/public/Footer'
 
 export const metadata = {
   title: 'Bravito After School - Cursuri pentru copii în Chișinău',
-  description: 'Copilul tău învață Python, dezvoltare web și AI și creează proiecte reale. Grupe mici (max 6 elevi), profesori cu experiență, aplicație gamificată. Prima lecție GRATUITĂ!',
+  description: 'La Bravito After School copilul tău învață limbi străine, matematică și alte discipline într-un mediu prietenos. Grupe mici, profesori calificați, prima lecție GRATUITĂ!',
 }
 
 // Revalidează pagina la fiecare 60 secunde — modificările din admin (poze, prețuri,

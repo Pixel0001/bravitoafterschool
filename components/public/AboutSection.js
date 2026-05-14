@@ -16,7 +16,7 @@ import { CheckBadgeIcon } from '@heroicons/react/24/solid'
 const STATS = [
   { value: '500+', label: 'Elevi activi', color: 'from-[#30919f] to-[#136976]' },
   { value: '5+', label: 'Ani experiență', color: 'from-[#f8b316] to-[#e5a310]' },
-  { value: '15+', label: 'Module învățare', color: 'from-[#30919f] to-[#136976]' },
+  { value: '15+', label: 'Cursuri active', color: 'from-[#30919f] to-[#136976]' },
   { value: '98%', label: 'Satisfacție', color: 'from-[#f8b316] to-[#e5a310]' }
 ]
 
@@ -24,19 +24,19 @@ const VALUES = [
   {
     icon: HeartIcon,
     title: 'Pasiune',
-    desc: 'Iubim programarea și o transmitem copiilor cu entuziasm și răbdare',
+    desc: 'Iubim ceea ce facem și se vede în rezultatele copiilor noștri',
     gradient: 'from-rose-500 to-pink-600'
   },
   {
     icon: AcademicCapIcon,
     title: 'Excelență',
-    desc: 'Curriculum modern, metodologie verificată și profesori certificați',
+    desc: 'Standarde înalte și metode moderne de predare certificate',
     gradient: 'from-[#30919f] to-[#136976]'
   },
   {
     icon: StarIcon,
     title: 'Creativitate',
-    desc: 'Învățare prin proiecte reale: jocuri, site-uri și aplicații',
+    desc: 'Învățare prin joc și explorare liberă a curiozității',
     gradient: 'from-[#f8b316] to-[#e5a310]'
   },
   {
@@ -48,12 +48,12 @@ const VALUES = [
 ]
 
 const HIGHLIGHTS = [
-  'Curs de Python adaptat copiilor (10–16 ani)',
-  'Web Development: HTML, CSS, JavaScript',
-  'Inițiere în Inteligență Artificială și Machine Learning',
-  'Aplicație proprie de învățare gamificată',
-  'Sistem de recompense, level-up și leaderboard',
-  'Maxim 6 elevi pe grupă, atenție individuală'
+  'Limbi străine: Engleză, Germană, Franceză (5–16 ani)',
+  'Matematică și pregătire pentru teste școlare',
+  'Lecții individuale și în grupe mici (max 5 elevi)',
+  'Profesori calificați cu experiență pedagogică',
+  'Program flexibil, adaptat orarului școlar',
+  'Prima lecție gratuită fără niciun angajament'
 ]
 
 function useCountUp(end, duration = 2000) {
@@ -161,10 +161,10 @@ export default function AboutSection() {
           </div>
           <h2 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-[var(--foreground)] mb-8">
             Despre <span className="text-[#30919f]">Bravito</span>{' '}
-            <span className="text-[#f8b316]">Academy</span>
+            <span className="text-[#f8b316]">After School</span>
           </h2>
           <p className="text-xl lg:text-2xl text-[var(--text-muted)] max-w-3xl mx-auto leading-relaxed">
-            Mai mult decât o școală IT — suntem comunitatea care formează viitorii programatori din Moldova
+            Mai mult decât o școală — suntem o comunitate dedicată dezvoltării armonioase a fiecărui copil
           </p>
         </div>
 
@@ -209,10 +209,10 @@ export default function AboutSection() {
                 Misiunea noastră
               </div>
               <h3 className="text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-2">
-                Programare pentru copii
+                Cursuri pentru copii
               </h3>
               <p className="text-lg text-[var(--text-muted)]">
-                Singura academie din Chișinău dedicată exclusiv copiilor de 10–16 ani
+                O școală after school dedicată copiilor din Chișinău, 5–16 ani
               </p>
             </div>
 
@@ -234,8 +234,9 @@ export default function AboutSection() {
 
             <div className="relative bg-gradient-to-br from-[#30919f]/5 to-[#f8b316]/5 rounded-2xl p-6 border-l-4 border-[#f8b316]">
               <p className="text-[var(--text-muted)] italic leading-relaxed">
-                "Credem că orice copil poate învăța să programeze dacă i se oferă mediul potrivit, profesori
-                pasionați și proiecte care îi inspiră. Programarea nu e doar o carieră — e un mod de a gândi."
+                "Cred cu tărie că fiecare copil este unic și are nevoie de un mediu în care să se simtă
+                în siguranță pentru a explora și a-și descoperi pasiunile. La Bravito, construim acest
+                mediu cu dragoste și dedicare."
               </p>
             </div>
 
@@ -253,9 +254,10 @@ export default function AboutSection() {
 
               <div className="space-y-4 text-[var(--text-muted)] leading-relaxed">
                 <p>
-                  Bravito After School s-a născut din dorința de a oferi copiilor din Moldova acces la educația digitală
-                  de calitate. <strong className="text-[var(--foreground)]"> Programarea este alfabetizarea secolului 21</strong>,
-                  iar fiecare copil merită șansa să o învețe corect.
+                  Bravito After School s-a născut din dorința de a oferi copiilor un spațiu sigur și
+                  stimulant unde pot explora, învăța și crește.
+                  <strong className="text-[var(--foreground)]"> Educația trebuie să fie o aventură</strong>,
+                  nu o corvoadă.
                 </p>
               </div>
             </div>
