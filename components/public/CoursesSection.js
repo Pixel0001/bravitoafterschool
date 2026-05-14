@@ -281,9 +281,9 @@ const SectionHeader = () => (
     </h2>
 
     <p className="text-xl text-[var(--text-muted)] max-w-2xl mx-auto leading-relaxed">
-      Programe IT moderne create cu pasiune pentru
-      <span className="font-medium text-[var(--foreground)]"> viitorii programatori </span>
-      din generația ta
+      Programe educaționale create cu pasiune pentru
+      <span className="font-medium text-[var(--foreground)]"> dezvoltarea completă </span>
+      a copilului tău
     </p>
   </div>
 )
