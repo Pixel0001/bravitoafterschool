@@ -8,11 +8,17 @@
  *   node scripts/set-telegram-webhook.mjs https://pyweb.md
  */
 
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
-// Citire .env manual
-const envPath = resolve(process.cwd(), '.env')
+// Citire env: .env.local are prioritate, apoi .env
+const candidates = ['.env.local', '.env']
+const envPath = candidates.map(f => resolve(process.cwd(), f)).find(p => existsSync(p))
+if (!envPath) {
+  console.error('❌ Nu am găsit .env.local sau .env în', process.cwd())
+  process.exit(1)
+}
+console.log(`📄 Citesc variabilele din: ${envPath}`)
 const envContent = readFileSync(envPath, 'utf-8')
 const env = {}
 for (const line of envContent.split('\n')) {
@@ -21,7 +27,11 @@ for (const line of envContent.split('\n')) {
   const eqIdx = trimmed.indexOf('=')
   if (eqIdx === -1) continue
   const key = trimmed.slice(0, eqIdx).trim()
-  const value = trimmed.slice(eqIdx + 1).trim()
+  let value = trimmed.slice(eqIdx + 1).trim()
+  // Strip ghilimele duble/single dacă există
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    value = value.slice(1, -1)
+  }
   env[key] = value
 }
 
