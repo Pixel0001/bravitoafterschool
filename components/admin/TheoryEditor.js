@@ -269,7 +269,7 @@ function PreviewBlock({ b, highlight }) {
       )
     case 'image':
       return wrap(b.url
-        ? <img src={b.url} alt={b.alt || ''} className="my-3 rounded-xl max-w-full h-auto shadow" />
+        ? <div className="my-3 aspect-square w-full max-w-sm mx-auto rounded-xl overflow-hidden shadow"><img src={b.url} alt={b.alt || ''} className="w-full h-full object-cover" /></div>
         : <div className="my-3 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 p-6 text-center text-slate-400 text-sm">📷 Imagine fără URL</div>)
     case 'video': {
       const raw = (b.url || '').trim()
@@ -578,9 +578,34 @@ function BlockEditor({ block, idx, total, disabled, onChange, onRemove, onConver
 
         {block.type === 'image' && (
           <div className="space-y-2">
-            <input value={block.url || ''} onChange={e => update({ url: e.target.value })} disabled={disabled}
-              placeholder="URL imagine (https://... sau /uploads/...)"
-              className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-indigo-400" />
+            <div className="flex gap-2">
+              <input value={block.url || ''} onChange={e => update({ url: e.target.value })} disabled={disabled}
+                placeholder="URL imagine (https://... sau /uploads/...)"
+                className="flex-1 px-3 py-2 border rounded-lg text-sm outline-none focus:border-indigo-400" />
+              <label className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer transition ${disabled ? 'opacity-40 pointer-events-none' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'}`}>
+                <PhotoIcon className="w-4 h-4" />
+                Upload
+                <input type="file" accept="image/*" className="hidden" disabled={disabled} onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const fd = new FormData()
+                  fd.append('file', file)
+                  fd.append('folder', 'theory')
+                  try {
+                    const r = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+                    const d = await r.json()
+                    if (d.url) update({ url: d.url })
+                    else alert(d.error || 'Eroare upload')
+                  } catch { alert('Eroare la upload') }
+                  e.target.value = ''
+                }} />
+              </label>
+            </div>
+            {block.url && (
+              <div className="aspect-square w-full max-w-[200px] rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                <img src={block.url} alt={block.alt || ''} className="w-full h-full object-cover" />
+              </div>
+            )}
             <input value={block.alt || ''} onChange={e => update({ alt: e.target.value })} disabled={disabled}
               placeholder="Descriere (alt text — pentru SEO)"
               className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:border-indigo-400" />

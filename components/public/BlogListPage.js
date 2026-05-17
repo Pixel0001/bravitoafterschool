@@ -17,7 +17,7 @@ export default function BlogListPage({ blogs }) {
             Articole, sfaturi &amp; <span className="text-[#f8b316]">resurse</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Tot ce trebuie să știi despre programare pentru copii, web development, AI și parcursul de învățare al copilului tău.
+            Sfaturi pentru părinți, metode de învățare, activități creative și tot ce trebuie să știi despre educația copilului tău.
           </p>
         </div>
       </section>

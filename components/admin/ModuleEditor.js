@@ -10,6 +10,7 @@ export default function ModuleEditor({ module: m, canEdit }) {
   const [form, setForm] = useState({
     title: m.title, description: m.description || '', language: m.language || '',
     order: m.order, active: m.active, coverImage: m.coverImage || '',
+    grades: m.grades || [],
   })
 
   const save = async () => {
@@ -42,6 +43,25 @@ export default function ModuleEditor({ module: m, canEdit }) {
                 </label>
               </div>
               <input value={form.coverImage} onChange={e => setForm({ ...form, coverImage: e.target.value })} placeholder="Cover URL" className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-1.5">Clase vizibile (gol = toate clasele):</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1,2,3,4,5,6,7,8,9].map(g => {
+                    const checked = form.grades.includes(g)
+                    return (
+                      <label key={g} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                        checked ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-indigo-400'
+                      }`}>
+                        <input type="checkbox" className="hidden" checked={checked} onChange={() => {
+                          const next = checked ? form.grades.filter(x => x !== g) : [...form.grades, g].sort((a,b)=>a-b)
+                          setForm({ ...form, grades: next })
+                        }} />
+                        Cl.{g}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -49,6 +69,9 @@ export default function ModuleEditor({ module: m, canEdit }) {
                 <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">#{m.order}</span>
                 {m.language && <span className="text-xs px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full">{m.language}</span>}
                 {!m.active && <span className="text-xs px-2 py-0.5 bg-red-50 text-red-600 rounded-full">inactiv</span>}
+                {m.grades?.length > 0
+                  ? m.grades.map(g => <span key={g} className="text-xs px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-semibold">Cl.{g}</span>)
+                  : <span className="text-xs px-2 py-0.5 bg-green-50 text-green-700 rounded-full">Toate clasele</span>}
               </div>
               <h2 className="text-2xl font-bold mt-1 text-gray-900">{m.title}</h2>
               {m.description && <p className="text-gray-600 mt-1 text-sm">{m.description}</p>}

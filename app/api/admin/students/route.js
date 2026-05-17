@@ -123,10 +123,10 @@ export async function POST(request) {
       }, { status: 403 })
     }
 
-    const { fullName, age, parentName, parentPhone, parentEmail, notes } = body
+    const { fullName, age, grade, parentName, parentPhone, parentEmail, notes } = body
 
     const student = await prisma.student.create({
-      data: { fullName, age, parentName, parentPhone, parentEmail, notes }
+      data: { fullName, age, grade: grade ?? null, parentName, parentPhone, parentEmail, notes }
     })
 
     return NextResponse.json(student, { status: 201 })

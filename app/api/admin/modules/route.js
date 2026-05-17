@@ -22,7 +22,7 @@ export async function POST(req) {
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { title, description, language, coverImage, order } = body
+  const { title, description, language, coverImage, order, grades } = body
   if (!title) return NextResponse.json({ error: 'Titlul e obligatoriu' }, { status: 400 })
 
   let slug = slugify(body.slug || title)
@@ -41,6 +41,7 @@ export async function POST(req) {
       language: language || null,
       coverImage: coverImage || null,
       order: typeof order === 'number' ? order : 0,
+      grades: Array.isArray(grades) ? grades : [],
       createdById: user?.id || null,
     },
   })

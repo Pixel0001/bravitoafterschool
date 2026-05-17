@@ -30,7 +30,7 @@ const getModules = unstable_cache(
     where: { active: true },
     orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
     select: {
-      id: true, title: true, description: true, language: true, order: true,
+      id: true, title: true, description: true, language: true, order: true, grades: true,
       lessons: {
         where: { active: true },
         orderBy: { order: 'asc' },
@@ -154,7 +154,13 @@ async function DashboardContent({ token }) {
   const advanceSet = new Set(advances.map(a => a.moduleId))
   const progressMap = new Map(progresses.map(p => [p.lessonId, p]))
   const hiddenModuleIds = new Set(hiddenModulesRaw.map(h => h.moduleId))
-  const visibleModules = modules.filter(m => !hiddenModuleIds.has(m.id))
+  const visibleModules = modules.filter(m => {
+    if (hiddenModuleIds.has(m.id)) return false
+    // Filtrare dupa clasa elevului
+    if (!m.grades || m.grades.length === 0) return true // fara restrictie
+    if (!student.grade) return true // elevul fara clasa vede tot
+    return m.grades.includes(student.grade)
+  })
   const lessonAccessSet = new Set(lessonAccessesRaw.map(a => a.lessonId))
 
   const paymentDaysLeft = latestPayment

@@ -57,11 +57,11 @@ export async function PUT(request, { params }) {
       }, { status: 403 })
     }
 
-    const { fullName, age, parentName, parentPhone, parentEmail, notes } = body
+    const { fullName, age, grade, parentName, parentPhone, parentEmail, notes } = body
 
     const student = await prisma.student.update({
       where: { id },
-      data: { fullName, age, parentName, parentPhone, parentEmail, notes }
+      data: { fullName, age, grade: grade ?? null, parentName, parentPhone, parentEmail, notes }
     })
 
     return NextResponse.json(student)

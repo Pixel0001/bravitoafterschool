@@ -20,17 +20,27 @@ export async function generateMetadata({ params }) {
     where: { slug },
     select: { title: true, seoTitle: true, excerpt: true, seoDescription: true, coverImage: true }
   })
-  if (!blog) return { title: 'Articol negăsit - PyWeb Academy' }
-  const title = (blog.seoTitle || blog.title) + ' - PyWeb Blog'
-  const description = blog.seoDescription || blog.excerpt || 'Articol PyWeb Academy'
+  if (!blog) return { title: 'Articol negăsit - Bravito After School' }
+  const title = (blog.seoTitle || blog.title) + ' | Bravito After School'
+  const description = blog.seoDescription || blog.excerpt || 'Articol Bravito After School'
+  const url = `https://bravitoafterschool.md/blog/${slug}`
   return {
     title,
     description,
+    alternates: { canonical: url },
     openGraph: {
       title,
       description,
-      images: blog.coverImage ? [blog.coverImage] : [],
+      url,
+      images: blog.coverImage ? [{ url: blog.coverImage, width: 1200, height: 1200 }] : [],
       type: 'article',
+      siteName: 'Bravito After School',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: blog.coverImage ? [blog.coverImage] : [],
     },
   }
 }
@@ -62,8 +72,26 @@ export default async function BlogPostPage({ params }) {
         })
   ])
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: blog.seoTitle || blog.title,
+    description: blog.seoDescription || blog.excerpt || '',
+    image: blog.coverImage ? [blog.coverImage] : [],
+    datePublished: blog.publishedAt,
+    dateModified: blog.updatedAt || blog.publishedAt,
+    author: { '@type': 'Person', name: blog.authorName || 'Bravito After School' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Bravito After School',
+      logo: { '@type': 'ImageObject', url: 'https://bravitoafterschool.md/bravito.png' },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://bravitoafterschool.md/blog/${slug}` },
+  }
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Navbar forceOpaque />
       <BlogDetailPage blog={blog} recommendedCourses={recommendedCourses} recommendedBlogs={recommendedBlogs} />
       <Footer />

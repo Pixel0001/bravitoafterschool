@@ -15,6 +15,7 @@ export default function StudentForm({ student }) {
   const [formData, setFormData] = useState({
     fullName: student?.fullName || '',
     age: student?.age || '',
+    grade: student?.grade || '',
     parentName: student?.parentName || '',
     parentPhone: student?.parentPhone || '',
     parentEmail: student?.parentEmail || '',
@@ -47,7 +48,8 @@ export default function StudentForm({ student }) {
 
       const payload = {
         ...formData,
-        age: formData.age ? parseInt(formData.age) : null
+        age: formData.age ? parseInt(formData.age) : null,
+        grade: formData.grade ? parseInt(formData.grade) : null,
       }
       if (actionToken) {
         payload.actionToken = actionToken
@@ -108,6 +110,21 @@ export default function StudentForm({ student }) {
               max={18}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Clasa</label>
+            <select
+              name="grade"
+              value={formData.grade}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+            >
+              <option value="">— Nespecificată —</option>
+              {[1,2,3,4,5,6,7,8,9].map(g => (
+                <option key={g} value={g}>Clasa {g}</option>
+              ))}
+            </select>
           </div>
 
           <div>

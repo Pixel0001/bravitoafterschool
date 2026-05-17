@@ -28,7 +28,7 @@ export async function PATCH(req, { params }) {
 
   const { id } = await params
   const body = await req.json()
-  const allowedFields = ['title', 'description', 'language', 'coverImage', 'order', 'active']
+  const allowedFields = ['title', 'description', 'language', 'coverImage', 'order', 'active', 'grades']
   const data = {}
   for (const f of allowedFields) if (body[f] !== undefined) data[f] = body[f]
 

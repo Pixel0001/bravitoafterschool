@@ -20,8 +20,8 @@ export default function TeacherHeader({ user }) {
           {/* Mobile logo */}
           <Link href="/teacher" className="lg:hidden flex items-center gap-2">
             <Image
-              src="/PyWeb Academy logo.png"
-              alt="PyWeb Academy"
+              src="/bravito.png"
+              alt="Bravito After School"
               width={110}
               height={36}
               className="object-contain"

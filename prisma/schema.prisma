@@ -353,6 +353,7 @@ model Student {
   password     String?  // hash parolă opțional pentru autentificare alternativă (Argon2id)
   active       Boolean  @default(true) // dacă e false, /learn/[token] returnează acces interzis
   superStudent Boolean  @default(false) // Super elev — accesează orice lecție din orice modul, indiferent de progres
+  grade        Int?     // Clasa elevului (1-9); null = nespecificată
 
   // Limite per-elev (override peste grupă/global; null = folosește valoarea super-setării)
   cooldownOverrideMin Int?     // în minute, null = moștenește de la grupă/global
@@ -991,6 +992,7 @@ model LearningModule {
   coverImage     String?
   order          Int       @default(0)
   active         Boolean   @default(true)
+  grades         Int[]     @default([]) // Clasele la care e vizibil modulul (1-9); gol = vizibil pentru toți
   createdById    String?   @db.ObjectId
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

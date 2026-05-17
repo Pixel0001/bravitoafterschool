@@ -7,7 +7,7 @@ export async function GET(req, { params }) {
   const { token } = await params
   const student = await prisma.student.findFirst({
     where: { accessToken: token },
-    select: { id: true, fullName: true, active: true, superStudent: true },
+    select: { id: true, fullName: true, active: true, superStudent: true, grade: true },
   })
   if (!student) return NextResponse.json({ error: 'Token invalid' }, { status: 404 })
   if (student.active === false) {
@@ -47,6 +47,15 @@ export async function GET(req, { params }) {
   const advanceSet = new Set(advances.map(a => a.moduleId))
   const progressMap = new Map(progresses.map(p => [p.lessonId, p]))
 
+  // Filtrare module dupa clasa elevului
+  // Daca grades=[] → modul vizibil pentru toți; altfel doar pentru clasele specificate
+  const studentGrade = student.grade
+  const visibleModules = modules.filter(m => {
+    if (!m.grades || m.grades.length === 0) return true // fara restrictie de clasa
+    if (!studentGrade) return true // elevul nu are clasa setata → vede tot
+    return m.grades.includes(studentGrade)
+  })
+
   // Subscription state
   const isSuper = !!student.superStudent
   const expiresAtMs = latestPayment ? new Date(latestPayment.expiresAt).getTime() : null
@@ -76,7 +85,7 @@ export async function GET(req, { params }) {
   }
 
   // Modulele sunt independente — nu necesită terminarea modulului anterior
-  const enriched = modules.map((m) => {
+  const enriched = visibleModules.map((m) => {
     const hasManualAccess = accessSet.has(m.id)
     const hasFullAccess = isSuper || subscriptionActive || hasManualAccess
     const unlocked = true // modulele sunt mereu vizibile

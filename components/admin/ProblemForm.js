@@ -1,8 +1,54 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+
+// ── Image Upload Button ─────────────────────────────────────────────────────────────────
+function ImageUploadButton({ textareaRef, value, onChange, folder = 'problems' }) {
+  const fileRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', folder)
+      const r = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+      const d = await r.json()
+      if (!d.url) { toast.error(d.error || 'Eroare upload'); return }
+      // Insert at cursor position
+      const ta = textareaRef?.current
+      const mdTag = `![](${d.url})`
+      if (ta) {
+        const start = ta.selectionStart
+        const end = ta.selectionEnd
+        const newVal = value.slice(0, start) + mdTag + value.slice(end)
+        onChange(newVal)
+        // Restore cursor after inserted text
+        setTimeout(() => { ta.focus(); ta.setSelectionRange(start + mdTag.length, start + mdTag.length) }, 0)
+      } else {
+        onChange(value + '\n' + mdTag)
+      }
+      toast.success('Imagine încărcată!')
+    } catch { toast.error('Eroare la upload') } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <label className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition border ${
+      uploading ? 'opacity-50 pointer-events-none' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+    }`}>
+      📷 {uploading ? 'Încarcă...' : 'Upload imagine'}
+      <input type="file" accept="image/*" className="hidden" ref={fileRef} onChange={handleFile} disabled={uploading} />
+    </label>
+  )
+}
 
 const DIFF_COLOR = { EASY: 'bg-emerald-100 text-emerald-700', MEDIUM: 'bg-amber-100 text-amber-700', HARD: 'bg-rose-100 text-rose-700' }
 const DIFF_LABEL = { EASY: '🟢 Ușor', MEDIUM: '🟡 Mediu', HARD: '🔴 Greu' }
@@ -12,7 +58,7 @@ function inlineFmt(s) {
   if (!s) return ''
   return s
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="my-2 rounded-lg max-w-full h-auto shadow" />')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<span class="block my-2 aspect-square w-full max-w-[220px] rounded-lg overflow-hidden shadow inline-block"><img src="$2" alt="$1" class="w-full h-full object-cover" /></span>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" class="text-indigo-600 underline">$1</a>')
     .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-indigo-50 rounded text-sm font-mono text-indigo-700 font-medium">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
@@ -367,8 +413,12 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cerință (descriere) *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Cerință (descriere) *</label>
+                  <ImageUploadButton textareaRef={descRef} value={form.description} onChange={v => update('description', v)} />
+                </div>
                 <textarea
+                  ref={descRef}
                   value={form.description}
                   onChange={e => update('description', e.target.value)}
                   onKeyDown={e => handleTab(e, v => update('description', v))}
@@ -612,8 +662,12 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Explicație completă *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Explicație completă *</label>
+                  <ImageUploadButton textareaRef={explRef} value={form.explanation} onChange={v => update('explanation', v)} folder="problems" />
+                </div>
                 <textarea
+                  ref={explRef}
                   value={form.explanation}
                   onChange={e => update('explanation', e.target.value)}
                   onKeyDown={e => handleTab(e, v => update('explanation', v))}
