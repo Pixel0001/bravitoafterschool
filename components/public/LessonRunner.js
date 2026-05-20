@@ -27,6 +27,14 @@ const DIFF_COLOR = {
   MEDIUM: 'bg-amber-100 text-amber-700',
   HARD: 'bg-rose-100 text-rose-700',
 }
+function seededShuffle(arr, seed) {
+  let s = seed
+  for (let i = arr.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff
+    const j = s % (i + 1);[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
 const DIFF_LABEL = { EASY: 'Usor', MEDIUM: 'Mediu', HARD: 'Greu' }
 
 function CooldownBanner({ until, onExpire }) {
@@ -278,6 +286,9 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [resetKey, setResetKey] = useState(0) // bumped to force re-render when same-idx problem is reset
+  const [orderItems, setOrderItems] = useState([]) // pentru ORDER_IMAGES
+  const [fillAnswers, setFillAnswers] = useState([]) // pentru FILL_IN
+  const dragRef = useRef(null)
   const startRef = useRef(Date.now())
 
   // Dacă a venit ?problemId=... și teoria e gata, sărim direct la lista de probleme
@@ -304,6 +315,23 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
     startRef.current = Date.now(); setTime(0)
     setTransitioning(true)
     const t = setTimeout(() => setTransitioning(false), 120)
+    // Init ORDER_IMAGES
+    const prob = problems[idx]
+    if (prob?.type === 'ORDER_IMAGES' && prob.options?.length) {
+      const seed = prob.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+      const shuffled = seededShuffle([...prob.options], seed)
+      setOrderItems(shuffled)
+      setAnswer(JSON.stringify(shuffled))
+    } else {
+      setOrderItems([])
+    }
+    // Init FILL_IN
+    if (prob?.type === 'FILL_IN' && prob.options?.length) {
+      setFillAnswers(new Array(prob.options.length).fill(''))
+      setAnswer('[]')
+    } else {
+      setFillAnswers([])
+    }
     return () => clearTimeout(t)
   }, [idx, problems, resetKey])
 
@@ -486,6 +514,10 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
       if (!code.trim() && !answer.trim()) return toast.error('Introdu un raspuns')
     } else if (cur.type === 'MULTIPLE_SELECT') {
       if (!Array.isArray(answer) || answer.length === 0) return toast.error('Selectează cel puțin o variantă')
+    } else if (cur.type === 'ORDER_IMAGES') {
+      if (!orderItems.length) return toast.error('Aranjează imaginile')
+    } else if (cur.type === 'FILL_IN') {
+      if (fillAnswers.every(a => !a?.trim())) return toast.error('Completează cel puțin un câmp')
     } else if (!answer.trim()) return toast.error('Introdu un raspuns')
 
     // ===== MOD GUEST: notare 100% client-side, ZERO request către server =====
@@ -645,7 +677,7 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
     const doFetch = async () => {
       const r = await fetch(`/api/public/learn/${token}/submit`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemId: cur.id, lessonId: lesson.id, source: 'lesson', answer: cur.type === 'MULTIPLE_SELECT' ? JSON.stringify(Array.isArray(answer) ? answer : []) : (answer || null), code: code || null, timeSpent: time }),
+        body: JSON.stringify({ problemId: cur.id, lessonId: lesson.id, source: 'lesson', answer: cur.type === 'MULTIPLE_SELECT' ? JSON.stringify(Array.isArray(answer) ? answer : []) : cur.type === 'ORDER_IMAGES' ? JSON.stringify(orderItems) : cur.type === 'FILL_IN' ? JSON.stringify(fillAnswers) : (answer || null), code: code || null, timeSpent: time }),
       })
       const d = await r.json()
       if (!r.ok) {
@@ -1462,6 +1494,69 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                                 </button>
                               </>
                             )}
+                          </div>
+                        )}
+
+                        {cur.type === 'ORDER_IMAGES' && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-[#a0b8bc] mb-2">🖼️ Trage sau folosește săgețile ca să aranjezi imaginile în ordinea corectă.</p>
+                            {orderItems.map((url, i) => (
+                              <div
+                                key={url}
+                                draggable
+                                onDragStart={() => { dragRef.current = i }}
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={() => {
+                                  const from = dragRef.current
+                                  if (from === null || from === i) return
+                                  const arr = [...orderItems]
+                                  const [item] = arr.splice(from, 1)
+                                  arr.splice(i, 0, item)
+                                  setOrderItems(arr)
+                                  setAnswer(JSON.stringify(arr))
+                                  dragRef.current = null
+                                }}
+                                onDragEnd={() => { dragRef.current = null }}
+                                className="flex items-center gap-3 bg-white border-2 border-slate-200 rounded-xl p-2 cursor-grab active:cursor-grabbing select-none"
+                              >
+                                <div className="flex flex-col gap-0.5 shrink-0">
+                                  <button type="button" disabled={i === 0} onClick={() => {
+                                    const arr = [...orderItems]
+                                    ;[arr[i-1], arr[i]] = [arr[i], arr[i-1]]
+                                    setOrderItems(arr); setAnswer(JSON.stringify(arr))
+                                  }} className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs disabled:opacity-30">▲</button>
+                                  <button type="button" disabled={i === orderItems.length - 1} onClick={() => {
+                                    const arr = [...orderItems]
+                                    ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
+                                    setOrderItems(arr); setAnswer(JSON.stringify(arr))
+                                  }} className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs disabled:opacity-30">▼</button>
+                                </div>
+                                <span className="text-xs font-bold text-[#30919f] w-5 shrink-0">{i+1}</span>
+                                <img src={url} alt={`img-${i}`} className="w-24 h-24 object-cover rounded-lg border border-slate-200 shrink-0" />
+                                <span className="text-slate-400 text-xs">≡ trage</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {cur.type === 'FILL_IN' && (
+                          <div className="space-y-3">
+                            <p className="text-xs text-[#a0b8bc]">✏️ Completează spațiile libere.</p>
+                            {cur.options?.map((label, i) => (
+                              <div key={i} className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm text-slate-700">{label}</span>
+                                <input
+                                  value={fillAnswers[i] || ''}
+                                  onChange={e => {
+                                    const arr = [...fillAnswers]; arr[i] = e.target.value
+                                    setFillAnswers(arr)
+                                    setAnswer(JSON.stringify(arr))
+                                  }}
+                                  className="w-32 px-3 py-1.5 border-2 border-[#30919f] bg-teal-50 rounded-lg text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-200 transition"
+                                  placeholder="..."
+                                />
+                              </div>
+                            ))}
                           </div>
                         )}
 
