@@ -445,11 +445,15 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
       const textParts = problem.description.split('___')
       let correct = []
       try { correct = JSON.parse(problem.correctAnswer || '[]') } catch {}
-      return textParts.map((text, i) => ({
-        text,
-        blank: i < textParts.length - 1,
-        answer: correct[i] || '',
-      }))
+      // Interleave: text → blank → text → blank → ... → text
+      const parts = []
+      textParts.forEach((text, i) => {
+        parts.push({ text, blank: false, answer: '' })
+        if (i < textParts.length - 1) {
+          parts.push({ text: '', blank: true, answer: correct[i] || '' })
+        }
+      })
+      return parts
     }
     return [{ text: '', blank: false, answer: '' }]
   }
