@@ -1526,13 +1526,12 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                                 <div className="w-14 bg-gradient-to-b from-[#30919f] to-[#136976] flex items-center justify-center shrink-0">
                                   <span className="text-white font-black text-2xl">{i + 1}</span>
                                 </div>
-                                {/* Imagine */}
-                                <div className="flex-1 min-h-[120px]">
+                                {/* Imagine 16:9 */}
+                                <div className="flex-1 relative" style={{ aspectRatio: '16/9' }}>
                                   <img
                                     src={url}
                                     alt={`Imagine ${i + 1}`}
-                                    className="w-full h-full object-cover"
-                                    style={{ minHeight: 120, maxHeight: 200 }}
+                                    className="absolute inset-0 w-full h-full object-cover"
                                   />
                                 </div>
                                 {/* Butoane sus/jos */}
