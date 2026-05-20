@@ -36,6 +36,7 @@ export default function SolveSet({ token }) {
   const [fillAnswers, setFillAnswers] = useState([]) // pentru FILL_IN
   const startRef = useRef(Date.now())
   const codeAreaRef = useRef(null)
+  const dragRef = useRef(null) // index-ul elementului drag-at curent
 
   const handleCodeKeyDown = useCallback((e) => {
     const ta = e.target
@@ -361,35 +362,33 @@ export default function SolveSet({ token }) {
               </div>
             ) : current.type === 'ORDER_IMAGES' ? (
               <div className="space-y-2">
-                <p className="text-xs text-slate-500 font-medium">Aranjă imaginile în ordinea corectă folosind săgețile ▲▼</p>
+                <p className="text-xs text-slate-500 font-medium">Trage imaginile pentru a le aranja în ordinea corectă 🗐️</p>
                 {orderItems.map((url, i) => (
-                  <div key={url} className="flex items-center gap-3 bg-white border-2 border-gray-200 rounded-xl p-2 transition hover:border-indigo-300">
-                    <div className="flex flex-col gap-0.5">
-                      <button
-                        disabled={i === 0 || current.attempt?.isCorrect}
-                        onClick={() => {
-                          const arr = [...orderItems]
-                          ;[arr[i], arr[i-1]] = [arr[i-1], arr[i]]
-                          setOrderItems(arr)
-                          setAnswer(JSON.stringify(arr))
-                        }}
-                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-indigo-100 rounded-lg text-sm font-bold disabled:opacity-30 transition">
-                        ▲
-                      </button>
-                      <button
-                        disabled={i === orderItems.length - 1 || current.attempt?.isCorrect}
-                        onClick={() => {
-                          const arr = [...orderItems]
-                          ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
-                          setOrderItems(arr)
-                          setAnswer(JSON.stringify(arr))
-                        }}
-                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-indigo-100 rounded-lg text-sm font-bold disabled:opacity-30 transition">
-                        ▼
-                      </button>
-                    </div>
+                  <div
+                    key={url}
+                    draggable={!current.attempt?.isCorrect}
+                    onDragStart={() => { dragRef.current = i }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => {
+                      e.preventDefault()
+                      const from = dragRef.current
+                      if (from === i || from == null) return
+                      const arr = [...orderItems]
+                      const [item] = arr.splice(from, 1)
+                      arr.splice(i, 0, item)
+                      dragRef.current = null
+                      setOrderItems(arr)
+                      setAnswer(JSON.stringify(arr))
+                    }}
+                    onDragEnd={() => { dragRef.current = null }}
+                    className={`flex items-center gap-3 bg-white border-2 rounded-xl p-2 transition select-none
+                      ${current.attempt?.isCorrect ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-indigo-400 cursor-grab active:cursor-grabbing active:border-indigo-500 active:shadow-md active:scale-[1.02]'}`}
+                  >
+                    {!current.attempt?.isCorrect && (
+                      <span className="text-slate-300 text-lg select-none px-1">☰</span>
+                    )}
                     <span className="text-sm font-bold text-slate-400 w-6 text-center shrink-0">{i+1}</span>
-                    <img src={url} alt={`poz-${i+1}`} className="w-24 h-24 object-cover rounded-xl border border-gray-200 shrink-0" />
+                    <img src={url} alt={`poz-${i+1}`} className="w-24 h-24 object-cover rounded-xl border border-gray-200 shrink-0 pointer-events-none" />
                   </div>
                 ))}
               </div>

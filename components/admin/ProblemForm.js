@@ -213,7 +213,7 @@ function ProblemStudentPreview({ form }) {
           if (!imgs.length) return <p className="text-sm text-slate-400 italic">Adaugă imagini pentru a vedea preview-ul.</p>
           return (
             <div className="space-y-2">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ordonare imagini (amestecate pentru elev)</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ordonare imagini — drag &amp; drop (amestecate pentru elev)</p>
               {imgs.map((url, i) => (
                 <div key={i} className="flex items-center gap-3 bg-slate-50 border-2 border-slate-200 rounded-xl p-2">
                   <div className="flex flex-col gap-0.5">
