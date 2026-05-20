@@ -372,6 +372,7 @@ const TYPES = [
   { value: 'CODING', label: 'Cod (verifică output)' },
   { value: 'ORDER_IMAGES', label: 'Ordonare imagini' },
   { value: 'FILL_IN', label: 'Completează spațiile' },
+  { value: 'DRAG_BLOCKS', label: 'Trage blocuri în locuri goale' },
 ]
 
 const FMT_HINT = (
@@ -447,7 +448,7 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
     try {
       const payload = {
         ...form,
-        options: ['MULTIPLE_CHOICE','MULTIPLE_SELECT','ORDER_IMAGES','FILL_IN'].includes(form.type)
+        options: ['MULTIPLE_CHOICE','MULTIPLE_SELECT','ORDER_IMAGES','FILL_IN','DRAG_BLOCKS'].includes(form.type)
           ? form.options.filter(o => o.trim())
           : [],
         correctAnswer: form.type === 'ORDER_IMAGES'
@@ -844,6 +845,77 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
                     {syncedAnswers.filter(a => a.trim()).length > 0 && (
                       <p className="text-xs text-green-700 font-medium">✅ Răspunsuri setate: {syncedAnswers.filter(a => a.trim()).length}/{form.options.length}</p>
                     )}
+                  </div>
+                )
+              })()}
+
+              {form.type === 'DRAG_BLOCKS' && (() => {
+                let correct = []
+                try { correct = JSON.parse(form.correctAnswer || '[]') } catch {}
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-800">
+                      🧩 <strong>Cum funcționează:</strong> Adaugă token-urile disponibile (semne, litere, cuvinte) în „Token-uri”.
+                      Apoi specifică <strong>ordinea corectă</strong> — ce token trebuie în fiecare slot. Elevul va trage sau apasa token-urile pentru a le plasa.
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">🎴 Token-uri disponibile (ce vede elevul sus)</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {form.options.map((tok, i) => (
+                          <div key={i} className="flex items-center gap-1 bg-indigo-100 border border-indigo-300 rounded-xl px-3 py-1.5">
+                            <span className="font-bold text-indigo-800 text-sm">{tok || <span className="text-indigo-400 italic">gol</span>}</span>
+                            <input
+                              value={tok}
+                              onChange={e => updateOption(i, e.target.value)}
+                              className="w-20 px-2 py-0.5 border border-indigo-300 rounded-lg text-sm font-mono bg-white"
+                              placeholder="token"
+                            />
+                            {form.options.length > 1 && (
+                              <button type="button" onClick={() => removeOption(i)} className="text-red-500 hover:text-red-700 text-lg leading-none">×</button>
+                            )}
+                          </div>
+                        ))}
+                        <button type="button" onClick={addOption} className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700">+ Token</button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">✅ Ordinea corectă (sloturi)</label>
+                      <p className="text-xs text-gray-500 mb-2">Adaugă slot-urile în ordinea corectă. Fiecare slot = un loc gol pe care elevul trebuie să-l completeze.</p>
+                      {correct.map((tok, i) => (
+                        <div key={i} className="flex items-center gap-2 mb-2">
+                          <span className="w-8 h-8 rounded-full bg-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0">{i + 1}</span>
+                          <select
+                            value={tok}
+                            onChange={e => {
+                              const arr = [...correct]; arr[i] = e.target.value
+                              update('correctAnswer', JSON.stringify(arr))
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option value="">— alege token —</option>
+                            {form.options.filter(o => o.trim()).map((o, j) => <option key={j} value={o}>{o}</option>)}
+                          </select>
+                          <button type="button" onClick={() => {
+                            const arr = correct.filter((_, idx) => idx !== i)
+                            update('correctAnswer', JSON.stringify(arr))
+                          }} className="text-red-500 hover:text-red-700 text-lg">×</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={() => update('correctAnswer', JSON.stringify([...correct, '']))}
+                        className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Adaugă slot</button>
+                      {correct.filter(t => t.trim()).length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2 items-center">
+                          <span className="text-xs text-gray-500">Preview răspuns corect:</span>
+                          {correct.map((tok, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-100 border border-emerald-300 rounded-xl text-sm font-bold text-emerald-800">
+                              <span className="text-emerald-500 text-xs">{i + 1}.</span> {tok}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )
               })()}

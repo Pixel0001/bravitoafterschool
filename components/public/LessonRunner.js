@@ -288,6 +288,8 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
   const [resetKey, setResetKey] = useState(0) // bumped to force re-render when same-idx problem is reset
   const [orderItems, setOrderItems] = useState([]) // pentru ORDER_IMAGES
   const [fillAnswers, setFillAnswers] = useState([]) // pentru FILL_IN
+  const [dragBlockSlots, setDragBlockSlots] = useState([]) // pentru DRAG_BLOCKS: sloturi [token|null]
+  const [dragBlockPool, setDragBlockPool] = useState([]) // pentru DRAG_BLOCKS: tokens neplasate
   const dragRef = useRef(null)
   const startRef = useRef(Date.now())
 
@@ -331,6 +333,17 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
       setAnswer('[]')
     } else {
       setFillAnswers([])
+    }
+    // Init DRAG_BLOCKS
+    if (prob?.type === 'DRAG_BLOCKS') {
+      let correct = []
+      try { correct = JSON.parse(prob.correctAnswer || '[]') } catch {}
+      setDragBlockSlots(new Array(correct.length).fill(null))
+      setDragBlockPool([...( prob.options || [])])
+      setAnswer('[]')
+    } else {
+      setDragBlockSlots([])
+      setDragBlockPool([])
     }
     return () => clearTimeout(t)
   }, [idx, problems, resetKey])
@@ -518,6 +531,8 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
       if (!orderItems.length) return toast.error('Aranjează imaginile')
     } else if (cur.type === 'FILL_IN') {
       if (fillAnswers.every(a => !a?.trim())) return toast.error('Completează cel puțin un câmp')
+    } else if (cur.type === 'DRAG_BLOCKS') {
+      if (dragBlockSlots.every(s => !s)) return toast.error('Plasează cel puțin un bloc')
     } else if (!answer.trim()) return toast.error('Introdu un raspuns')
 
     // ===== MOD GUEST: notare 100% client-side, ZERO request către server =====
@@ -677,7 +692,7 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
     const doFetch = async () => {
       const r = await fetch(`/api/public/learn/${token}/submit`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemId: cur.id, lessonId: lesson.id, source: 'lesson', answer: cur.type === 'MULTIPLE_SELECT' ? JSON.stringify(Array.isArray(answer) ? answer : []) : cur.type === 'ORDER_IMAGES' ? JSON.stringify(orderItems) : cur.type === 'FILL_IN' ? JSON.stringify(fillAnswers) : (answer || null), code: code || null, timeSpent: time }),
+        body: JSON.stringify({ problemId: cur.id, lessonId: lesson.id, source: 'lesson', answer: cur.type === 'MULTIPLE_SELECT' ? JSON.stringify(Array.isArray(answer) ? answer : []) : cur.type === 'ORDER_IMAGES' ? JSON.stringify(orderItems) : cur.type === 'FILL_IN' ? JSON.stringify(fillAnswers) : cur.type === 'DRAG_BLOCKS' ? JSON.stringify(dragBlockSlots) : (answer || null), code: code || null, timeSpent: time }),
       })
       const d = await r.json()
       if (!r.ok) {
@@ -1601,6 +1616,127 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                             ))}
                           </div>
                         )}
+
+                        {cur.type === 'DRAG_BLOCKS' && (() => {
+                          const COLORS = [
+                            'bg-violet-100 border-violet-400 text-violet-900 hover:bg-violet-200',
+                            'bg-amber-100 border-amber-400 text-amber-900 hover:bg-amber-200',
+                            'bg-rose-100 border-rose-400 text-rose-900 hover:bg-rose-200',
+                            'bg-emerald-100 border-emerald-400 text-emerald-900 hover:bg-emerald-200',
+                            'bg-blue-100 border-blue-400 text-blue-900 hover:bg-blue-200',
+                            'bg-pink-100 border-pink-400 text-pink-900 hover:bg-pink-200',
+                          ]
+                          // Assign a stable color to each unique token
+                          const allTokens = cur.options || []
+                          const tokenColor = {}
+                          allTokens.forEach((t, i) => { if (!tokenColor[t]) tokenColor[t] = COLORS[i % COLORS.length] })
+
+                          const placeToken = (token) => {
+                            // Find first empty slot
+                            const slotIdx = dragBlockSlots.findIndex(s => s === null)
+                            if (slotIdx === -1) return // all full
+                            const newSlots = [...dragBlockSlots]; newSlots[slotIdx] = token
+                            setDragBlockSlots(newSlots)
+                            setDragBlockPool(prev => { const p = [...prev]; p.splice(p.indexOf(token), 1); return p })
+                            setAnswer(JSON.stringify(newSlots))
+                          }
+
+                          const removeFromSlot = (slotIdx) => {
+                            const token = dragBlockSlots[slotIdx]
+                            if (!token) return
+                            const newSlots = [...dragBlockSlots]; newSlots[slotIdx] = null
+                            setDragBlockSlots(newSlots)
+                            setDragBlockPool(prev => [...prev, token])
+                            setAnswer(JSON.stringify(newSlots))
+                          }
+
+                          return (
+                            <div className="space-y-4">
+                              {/* Token pool */}
+                              <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Token-uri disponibile — apasă sau trage</p>
+                                <div className="flex flex-wrap gap-2 min-h-[44px]">
+                                  {dragBlockPool.length === 0 && (
+                                    <span className="text-sm text-slate-400 italic">Toate token-urile au fost plasate ✓</span>
+                                  )}
+                                  {dragBlockPool.map((token, pi) => (
+                                    <button
+                                      key={`pool-${token}-${pi}`}
+                                      type="button"
+                                      draggable
+                                      onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ from: 'pool', pi, token })); e.dataTransfer.effectAllowed = 'move' }}
+                                      onClick={() => placeToken(token)}
+                                      className={`px-4 py-2 rounded-xl border-2 font-black text-lg cursor-pointer select-none transition active:scale-95 shadow-sm ${tokenColor[token] || COLORS[0]}`}
+                                    >
+                                      {token}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Slot-uri */}
+                              <div>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Sloturi — trage token-urile aici</p>
+                                <div className="flex flex-wrap gap-3">
+                                  {dragBlockSlots.map((slotToken, si) => (
+                                    <div
+                                      key={si}
+                                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                                      onDrop={e => {
+                                        e.preventDefault()
+                                        const data = JSON.parse(e.dataTransfer.getData('text/plain') || '{}')
+                                        const { from, pi, token, fromSlot } = data
+                                        if (from === 'pool') {
+                                          // token vine din pool
+                                          if (slotToken) {
+                                            // swap: pune token-ul din slot înainte în pool, pune noul token
+                                            const newPool = [...dragBlockPool]
+                                            newPool.splice(pi, 1)
+                                            newPool.push(slotToken)
+                                            const newSlots = [...dragBlockSlots]; newSlots[si] = token
+                                            setDragBlockPool(newPool); setDragBlockSlots(newSlots)
+                                            setAnswer(JSON.stringify(newSlots))
+                                          } else {
+                                            const newPool = [...dragBlockPool]; newPool.splice(pi, 1)
+                                            const newSlots = [...dragBlockSlots]; newSlots[si] = token
+                                            setDragBlockPool(newPool); setDragBlockSlots(newSlots)
+                                            setAnswer(JSON.stringify(newSlots))
+                                          }
+                                        } else if (from === 'slot') {
+                                          // swap între sloturi
+                                          const newSlots = [...dragBlockSlots]
+                                          newSlots[si] = token
+                                          newSlots[fromSlot] = slotToken // poate fi null
+                                          setDragBlockSlots(newSlots)
+                                          setAnswer(JSON.stringify(newSlots))
+                                        }
+                                      }}
+                                      className="flex flex-col items-center gap-1"
+                                    >
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase">{si + 1}</span>
+                                      {slotToken ? (
+                                        <button
+                                          type="button"
+                                          draggable
+                                          onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ from: 'slot', fromSlot: si, token: slotToken })); e.dataTransfer.effectAllowed = 'move' }}
+                                          onClick={() => removeFromSlot(si)}
+                                          className={`w-16 h-16 rounded-2xl border-2 font-black text-xl flex items-center justify-center cursor-pointer shadow transition active:scale-95 ${tokenColor[slotToken] || COLORS[0]}`}
+                                          title="Apasă ca să returnezi in pool"
+                                        >
+                                          {slotToken}
+                                        </button>
+                                      ) : (
+                                        <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-300 text-2xl">
+                                          ?
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
 
                         {/* Cooldown timer banner */}
                         {cooldownUntil && Date.now() < cooldownUntil.getTime() && (
