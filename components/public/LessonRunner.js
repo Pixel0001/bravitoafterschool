@@ -334,8 +334,8 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
     } else {
       setFillAnswers([])
     }
-    // Init DRAG_BLOCKS
-    if (prob?.type === 'DRAG_BLOCKS') {
+    // Init DRAG_BLOCKS / DRAG_INLINE (aceeași stare)
+    if (prob?.type === 'DRAG_BLOCKS' || prob?.type === 'DRAG_INLINE') {
       let correct = []
       try { correct = JSON.parse(prob.correctAnswer || '[]') } catch {}
       setDragBlockSlots(new Array(correct.length).fill(null))
@@ -531,7 +531,7 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
       if (!orderItems.length) return toast.error('Aranjează imaginile')
     } else if (cur.type === 'FILL_IN') {
       if (fillAnswers.every(a => !a?.trim())) return toast.error('Completează cel puțin un câmp')
-    } else if (cur.type === 'DRAG_BLOCKS') {
+    } else if (cur.type === 'DRAG_BLOCKS' || cur.type === 'DRAG_INLINE') {
       if (dragBlockSlots.every(s => !s)) return toast.error('Plasează cel puțin un bloc')
     } else if (!answer.trim()) return toast.error('Introdu un raspuns')
 
@@ -692,7 +692,7 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
     const doFetch = async () => {
       const r = await fetch(`/api/public/learn/${token}/submit`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ problemId: cur.id, lessonId: lesson.id, source: 'lesson', answer: cur.type === 'MULTIPLE_SELECT' ? JSON.stringify(Array.isArray(answer) ? answer : []) : cur.type === 'ORDER_IMAGES' ? JSON.stringify(orderItems) : cur.type === 'FILL_IN' ? JSON.stringify(fillAnswers) : cur.type === 'DRAG_BLOCKS' ? JSON.stringify(dragBlockSlots) : (answer || null), code: code || null, timeSpent: time }),
+        body: JSON.stringify({ problemId: cur.id, lessonId: lesson.id, source: 'lesson', answer: cur.type === 'MULTIPLE_SELECT' ? JSON.stringify(Array.isArray(answer) ? answer : []) : cur.type === 'ORDER_IMAGES' ? JSON.stringify(orderItems) : cur.type === 'FILL_IN' ? JSON.stringify(fillAnswers) : (cur.type === 'DRAG_BLOCKS' || cur.type === 'DRAG_INLINE') ? JSON.stringify(dragBlockSlots) : (answer || null), code: code || null, timeSpent: time }),
       })
       const d = await r.json()
       if (!r.ok) {
@@ -1618,118 +1618,296 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                         )}
 
                         {cur.type === 'DRAG_BLOCKS' && (() => {
+                          // dragRef.current = { from: 'pool'|'slot', pi?: number, si?: number, token: string }
                           const COLORS = [
-                            'bg-violet-100 border-violet-400 text-violet-900 hover:bg-violet-200',
-                            'bg-amber-100 border-amber-400 text-amber-900 hover:bg-amber-200',
-                            'bg-rose-100 border-rose-400 text-rose-900 hover:bg-rose-200',
-                            'bg-emerald-100 border-emerald-400 text-emerald-900 hover:bg-emerald-200',
-                            'bg-blue-100 border-blue-400 text-blue-900 hover:bg-blue-200',
-                            'bg-pink-100 border-pink-400 text-pink-900 hover:bg-pink-200',
+                            ['bg-violet-100 border-violet-400 text-violet-900', 'bg-violet-200'],
+                            ['bg-amber-100 border-amber-400 text-amber-900', 'bg-amber-200'],
+                            ['bg-rose-100 border-rose-400 text-rose-900', 'bg-rose-200'],
+                            ['bg-emerald-100 border-emerald-400 text-emerald-900', 'bg-emerald-200'],
+                            ['bg-blue-100 border-blue-400 text-blue-900', 'bg-blue-200'],
+                            ['bg-pink-100 border-pink-400 text-pink-900', 'bg-pink-200'],
                           ]
-                          // Assign a stable color to each unique token
                           const allTokens = cur.options || []
-                          const tokenColor = {}
-                          allTokens.forEach((t, i) => { if (!tokenColor[t]) tokenColor[t] = COLORS[i % COLORS.length] })
+                          const tokenColorIdx = {}
+                          allTokens.forEach((t, i) => { if (tokenColorIdx[t] === undefined) tokenColorIdx[t] = i % COLORS.length })
+                          const tc = (t) => COLORS[tokenColorIdx[t] ?? 0][0]
 
-                          const placeToken = (token) => {
-                            // Find first empty slot
+                          const applyDrop = (target) => {
+                            // target = { to: 'pool' } | { to: 'slot', si: number }
+                            const drag = dragRef.current
+                            if (!drag) return
+                            dragRef.current = null
+
+                            // Folosim valorile curente din closure (render-time)
+                            const slots = [...dragBlockSlots]
+                            const pool = [...dragBlockPool]
+
+                            let token
+                            if (drag.from === 'pool') {
+                              token = pool.splice(drag.pi, 1)[0]
+                            } else {
+                              token = slots[drag.si]
+                              slots[drag.si] = null
+                            }
+
+                            if (target.to === 'slot') {
+                              const displaced = slots[target.si]
+                              slots[target.si] = token
+                              if (displaced) {
+                                if (drag.from === 'slot') slots[drag.si] = displaced
+                                else pool.push(displaced)
+                              }
+                            } else {
+                              pool.push(token)
+                            }
+
+                            setDragBlockPool(pool)
+                            setDragBlockSlots(slots)
+                            setAnswer(JSON.stringify(slots))
+                          }
+
+                          const placeToken = (token, pi) => {
                             const slotIdx = dragBlockSlots.findIndex(s => s === null)
-                            if (slotIdx === -1) return // all full
+                            if (slotIdx === -1) return
                             const newSlots = [...dragBlockSlots]; newSlots[slotIdx] = token
-                            setDragBlockSlots(newSlots)
-                            setDragBlockPool(prev => { const p = [...prev]; p.splice(p.indexOf(token), 1); return p })
+                            const newPool = [...dragBlockPool]; newPool.splice(pi, 1)
+                            setDragBlockSlots(newSlots); setDragBlockPool(newPool)
                             setAnswer(JSON.stringify(newSlots))
                           }
 
-                          const removeFromSlot = (slotIdx) => {
-                            const token = dragBlockSlots[slotIdx]
+                          const removeFromSlot = (si) => {
+                            const token = dragBlockSlots[si]
                             if (!token) return
-                            const newSlots = [...dragBlockSlots]; newSlots[slotIdx] = null
+                            const newSlots = [...dragBlockSlots]; newSlots[si] = null
                             setDragBlockSlots(newSlots)
                             setDragBlockPool(prev => [...prev, token])
                             setAnswer(JSON.stringify(newSlots))
                           }
 
+                          const onDrop = (e, target) => {
+                            e.preventDefault(); e.stopPropagation()
+                            applyDrop(target)
+                          }
+
                           return (
                             <div className="space-y-4">
                               {/* Token pool */}
-                              <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4">
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Token-uri disponibile — apasă sau trage</p>
-                                <div className="flex flex-wrap gap-2 min-h-[44px]">
+                              <div
+                                className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4"
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={e => onDrop(e, { to: 'pool' })}
+                              >
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                                  🎴 Token-uri — <span className="text-[#30919f]">apasă</span> sau <span className="text-[#30919f]">trage</span>
+                                </p>
+                                <div className="flex flex-wrap gap-2 min-h-[52px]">
                                   {dragBlockPool.length === 0 && (
-                                    <span className="text-sm text-slate-400 italic">Toate token-urile au fost plasate ✓</span>
+                                    <span className="text-sm text-slate-400 italic self-center">Toate token-urile au fost plasate ✓</span>
                                   )}
                                   {dragBlockPool.map((token, pi) => (
-                                    <button
+                                    <div
                                       key={`pool-${token}-${pi}`}
-                                      type="button"
                                       draggable
-                                      onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ from: 'pool', pi, token })); e.dataTransfer.effectAllowed = 'move' }}
-                                      onClick={() => placeToken(token)}
-                                      className={`px-4 py-2 rounded-xl border-2 font-black text-lg cursor-pointer select-none transition active:scale-95 shadow-sm ${tokenColor[token] || COLORS[0]}`}
+                                      onDragStart={e => {
+                                        e.stopPropagation()
+                                        dragRef.current = { from: 'pool', pi, token }
+                                        e.dataTransfer.effectAllowed = 'move'
+                                        e.dataTransfer.setData('text/plain', 'drag')
+                                      }}
+                                      onDragEnd={() => { dragRef.current = null }}
+                                      onClick={() => placeToken(token, pi)}
+                                      className={`px-5 py-3 rounded-xl border-2 font-black text-xl cursor-grab active:cursor-grabbing select-none transition active:scale-95 shadow-sm ${tc(token)}`}
                                     >
                                       {token}
-                                    </button>
+                                    </div>
                                   ))}
                                 </div>
                               </div>
 
-                              {/* Slot-uri */}
+                              {/* Sloturi */}
                               <div>
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Sloturi — trage token-urile aici</p>
-                                <div className="flex flex-wrap gap-3">
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">📥 Sloturi — trage sau apasă un token, apoi apasă slotul</p>
+                                <div className="flex flex-wrap gap-4">
                                   {dragBlockSlots.map((slotToken, si) => (
                                     <div
                                       key={si}
-                                      onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                                      onDrop={e => {
-                                        e.preventDefault()
-                                        const data = JSON.parse(e.dataTransfer.getData('text/plain') || '{}')
-                                        const { from, pi, token, fromSlot } = data
-                                        if (from === 'pool') {
-                                          // token vine din pool
-                                          if (slotToken) {
-                                            // swap: pune token-ul din slot înainte în pool, pune noul token
-                                            const newPool = [...dragBlockPool]
-                                            newPool.splice(pi, 1)
-                                            newPool.push(slotToken)
-                                            const newSlots = [...dragBlockSlots]; newSlots[si] = token
-                                            setDragBlockPool(newPool); setDragBlockSlots(newSlots)
-                                            setAnswer(JSON.stringify(newSlots))
-                                          } else {
-                                            const newPool = [...dragBlockPool]; newPool.splice(pi, 1)
-                                            const newSlots = [...dragBlockSlots]; newSlots[si] = token
-                                            setDragBlockPool(newPool); setDragBlockSlots(newSlots)
-                                            setAnswer(JSON.stringify(newSlots))
-                                          }
-                                        } else if (from === 'slot') {
-                                          // swap între sloturi
-                                          const newSlots = [...dragBlockSlots]
-                                          newSlots[si] = token
-                                          newSlots[fromSlot] = slotToken // poate fi null
-                                          setDragBlockSlots(newSlots)
-                                          setAnswer(JSON.stringify(newSlots))
-                                        }
-                                      }}
+                                      onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+                                      onDrop={e => onDrop(e, { to: 'slot', si })}
                                       className="flex flex-col items-center gap-1"
                                     >
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase">{si + 1}</span>
+                                      <span className="text-xs font-black text-slate-400">{si + 1}</span>
                                       {slotToken ? (
-                                        <button
-                                          type="button"
+                                        <div
                                           draggable
-                                          onDragStart={e => { e.dataTransfer.setData('text/plain', JSON.stringify({ from: 'slot', fromSlot: si, token: slotToken })); e.dataTransfer.effectAllowed = 'move' }}
+                                          onDragStart={e => {
+                                            e.stopPropagation()
+                                            dragRef.current = { from: 'slot', si, token: slotToken }
+                                            e.dataTransfer.effectAllowed = 'move'
+                                            e.dataTransfer.setData('text/plain', 'drag')
+                                          }}
+                                          onDragEnd={() => { dragRef.current = null }}
                                           onClick={() => removeFromSlot(si)}
-                                          className={`w-16 h-16 rounded-2xl border-2 font-black text-xl flex items-center justify-center cursor-pointer shadow transition active:scale-95 ${tokenColor[slotToken] || COLORS[0]}`}
-                                          title="Apasă ca să returnezi in pool"
+                                          title="Click = înapoi în pool"
+                                          className={`w-16 h-16 rounded-2xl border-2 font-black text-2xl flex items-center justify-center cursor-grab active:cursor-grabbing select-none shadow transition active:scale-95 ${tc(slotToken)}`}
                                         >
                                           {slotToken}
-                                        </button>
+                                        </div>
                                       ) : (
-                                        <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-300 text-2xl">
+                                        <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-[#30919f]/40 bg-teal-50 flex items-center justify-center text-[#30919f]/30 text-3xl select-none">
                                           ?
                                         </div>
                                       )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {cur.type === 'DRAG_INLINE' && (() => {
+                          // Aceleași COLORS + tc helper ca la DRAG_BLOCKS
+                          const COLORS = [
+                            ['bg-violet-100 border-violet-400 text-violet-900', 'bg-violet-200'],
+                            ['bg-amber-100 border-amber-400 text-amber-900', 'bg-amber-200'],
+                            ['bg-rose-100 border-rose-400 text-rose-900', 'bg-rose-200'],
+                            ['bg-emerald-100 border-emerald-400 text-emerald-900', 'bg-emerald-200'],
+                            ['bg-blue-100 border-blue-400 text-blue-900', 'bg-blue-200'],
+                            ['bg-pink-100 border-pink-400 text-pink-900', 'bg-pink-200'],
+                          ]
+                          const allTokens = cur.options || []
+                          const tokenColorIdx = {}
+                          allTokens.forEach((t, i) => { if (tokenColorIdx[t] === undefined) tokenColorIdx[t] = i % COLORS.length })
+                          const tc = (t) => COLORS[tokenColorIdx[t] ?? 0][0]
+
+                          // Split description by ___ to get text segments
+                          const parts = cur.description.split('___')
+                          const blankCount = parts.length - 1
+
+                          const applyDropInline = (target) => {
+                            const drag = dragRef.current
+                            if (!drag) return
+                            dragRef.current = null
+                            const slots = [...dragBlockSlots]
+                            const pool = [...dragBlockPool]
+                            let token
+                            if (drag.from === 'pool') {
+                              token = pool.splice(drag.pi, 1)[0]
+                            } else {
+                              token = slots[drag.si]
+                              slots[drag.si] = null
+                            }
+                            if (target.to === 'slot') {
+                              const displaced = slots[target.si]
+                              slots[target.si] = token
+                              if (displaced) {
+                                if (drag.from === 'slot') slots[drag.si] = displaced
+                                else pool.push(displaced)
+                              }
+                            } else {
+                              pool.push(token)
+                            }
+                            setDragBlockPool(pool)
+                            setDragBlockSlots(slots)
+                            setAnswer(JSON.stringify(slots))
+                          }
+
+                          const placeToken = (token, pi) => {
+                            const si = dragBlockSlots.findIndex(s => s === null)
+                            if (si === -1) return
+                            const slots = [...dragBlockSlots]; slots[si] = token
+                            const pool = [...dragBlockPool]; pool.splice(pi, 1)
+                            setDragBlockSlots(slots); setDragBlockPool(pool)
+                            setAnswer(JSON.stringify(slots))
+                          }
+
+                          const removeFromSlotInline = (si) => {
+                            const token = dragBlockSlots[si]
+                            if (!token) return
+                            const slots = [...dragBlockSlots]; slots[si] = null
+                            setDragBlockSlots(slots)
+                            setDragBlockPool(prev => [...prev, token])
+                            setAnswer(JSON.stringify(slots))
+                          }
+
+                          return (
+                            <div className="space-y-5">
+                              {/* Inline text with blanks */}
+                              <div className="bg-white border-2 border-slate-200 rounded-2xl px-5 py-4 text-lg font-semibold text-slate-800 leading-loose">
+                                {parts.map((part, i) => (
+                                  <span key={i}>
+                                    {/* Text segment — render with line breaks */}
+                                    {part.split('\n').map((line, li) => (
+                                      <span key={li}>{li > 0 && <br />}{line}</span>
+                                    ))}
+                                    {/* Blank slot after each part except last */}
+                                    {i < blankCount && (
+                                      <span
+                                        onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+                                        onDrop={e => {
+                                          e.preventDefault(); e.stopPropagation()
+                                          applyDropInline({ to: 'slot', si: i })
+                                        }}
+                                        className="inline-flex items-center mx-1 align-middle"
+                                      >
+                                        {dragBlockSlots[i] ? (
+                                          <span
+                                            draggable
+                                            onDragStart={e => {
+                                              e.stopPropagation()
+                                              dragRef.current = { from: 'slot', si: i, token: dragBlockSlots[i] }
+                                              e.dataTransfer.effectAllowed = 'move'
+                                              e.dataTransfer.setData('text/plain', 'drag')
+                                            }}
+                                            onDragEnd={() => { dragRef.current = null }}
+                                            onClick={() => removeFromSlotInline(i)}
+                                            title="Click = înapoi în pool"
+                                            className={`inline-flex items-center px-3 py-1 rounded-xl border-2 font-black text-base cursor-grab active:cursor-grabbing select-none shadow-sm transition active:scale-95 ${tc(dragBlockSlots[i])}`}
+                                          >
+                                            {dragBlockSlots[i]}
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center justify-center px-4 py-1 rounded-xl border-2 border-dashed border-[#30919f]/50 bg-teal-50 text-[#30919f]/40 font-black text-base min-w-[52px] select-none">
+                                            ?
+                                          </span>
+                                        )}
+                                      </span>
+                                    )}
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* Token pool */}
+                              <div
+                                className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4"
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={e => {
+                                  e.preventDefault()
+                                  applyDropInline({ to: 'pool' })
+                                }}
+                              >
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                                  🎴 Token-uri — <span className="text-[#30919f]">apasă</span> sau <span className="text-[#30919f]">trage</span> în blank
+                                </p>
+                                <div className="flex flex-wrap gap-2 min-h-[48px]">
+                                  {dragBlockPool.length === 0 && (
+                                    <span className="text-sm text-slate-400 italic self-center">Toate token-urile au fost plasate ✓</span>
+                                  )}
+                                  {dragBlockPool.map((token, pi) => (
+                                    <div
+                                      key={`pool-${token}-${pi}`}
+                                      draggable
+                                      onDragStart={e => {
+                                        e.stopPropagation()
+                                        dragRef.current = { from: 'pool', pi, token }
+                                        e.dataTransfer.effectAllowed = 'move'
+                                        e.dataTransfer.setData('text/plain', 'drag')
+                                      }}
+                                      onDragEnd={() => { dragRef.current = null }}
+                                      onClick={() => placeToken(token, pi)}
+                                      className={`px-5 py-3 rounded-xl border-2 font-black text-xl cursor-grab active:cursor-grabbing select-none transition active:scale-95 shadow-sm ${tc(token)}`}
+                                    >
+                                      {token}
                                     </div>
                                   ))}
                                 </div>
@@ -1742,6 +1920,7 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                         {cooldownUntil && Date.now() < cooldownUntil.getTime() && (
                           <CooldownBanner until={cooldownUntil} onExpire={() => setCooldownUntil(null)} />
                         )}
+
 
                         <div className="flex flex-wrap gap-2 pt-1">
                           {cur.hint && curAttempts >= 1 && !curHintUsed && (

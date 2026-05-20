@@ -373,6 +373,7 @@ const TYPES = [
   { value: 'ORDER_IMAGES', label: 'Ordonare imagini' },
   { value: 'FILL_IN', label: 'Completează spațiile' },
   { value: 'DRAG_BLOCKS', label: 'Trage blocuri în locuri goale' },
+  { value: 'DRAG_INLINE', label: 'Completează blanks inline (ex: 12 ___ + 36 ___ = ___)' },
 ]
 
 const FMT_HINT = (
@@ -448,7 +449,7 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
     try {
       const payload = {
         ...form,
-        options: ['MULTIPLE_CHOICE','MULTIPLE_SELECT','ORDER_IMAGES','FILL_IN','DRAG_BLOCKS'].includes(form.type)
+        options: ['MULTIPLE_CHOICE','MULTIPLE_SELECT','ORDER_IMAGES','FILL_IN','DRAG_BLOCKS','DRAG_INLINE'].includes(form.type)
           ? form.options.filter(o => o.trim())
           : [],
         correctAnswer: form.type === 'ORDER_IMAGES'
@@ -916,6 +917,100 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
                         </div>
                       )}
                     </div>
+                  </div>
+                )
+              })()}
+
+              {form.type === 'DRAG_INLINE' && (() => {
+                // Blank-urile sunt marcate cu ___ în câmpul de descriere
+                const blankCount = (form.description.match(/___/g) || []).length
+                let correct = []
+                try { correct = JSON.parse(form.correctAnswer || '[]') } catch {}
+                // Ensure correct array has same length as blank count
+                const synced = Array.from({ length: blankCount }, (_, i) => correct[i] || '')
+
+                return (
+                  <div className="space-y-4">
+                    <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 text-sm text-violet-900">
+                      🔗 <strong>Cum funcționează:</strong> Scrie sarcina în câmpul <em>Cerință</em> și pune{' '}
+                      <code className="bg-violet-100 px-1.5 py-0.5 rounded font-mono font-bold">___</code>{' '}
+                      (3 underscore-uri) acolo unde vrei blank-uri. Elevul va trage sau apăsa token-uri direct în text.
+                      <br />
+                      <strong>Exemplu:</strong>{' '}
+                      <code className="bg-violet-100 px-1.5 py-0.5 rounded font-mono">12 ___ 36 ___ 54 ___ = 23</code>
+                    </div>
+
+                    {blankCount === 0 && (
+                      <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 text-sm text-amber-800">
+                        ⚠️ Nu am detectat niciun <code className="font-mono font-bold">___</code> în descriere. Adaugă-le în câmpul „Cerință" de mai sus.
+                      </div>
+                    )}
+
+                    {blankCount > 0 && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 text-sm text-emerald-800">
+                        ✅ {blankCount} blank{blankCount !== 1 ? '-uri' : ''} detectat{blankCount !== 1 ? 'e' : ''} în descriere.
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">🎴 Token-uri disponibile (ce vede elevul)</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {form.options.map((tok, i) => (
+                          <div key={i} className="flex items-center gap-1 bg-violet-100 border border-violet-300 rounded-xl px-3 py-1.5">
+                            <input
+                              value={tok}
+                              onChange={e => updateOption(i, e.target.value)}
+                              className="w-20 px-2 py-0.5 border border-violet-300 rounded-lg text-sm font-mono bg-white"
+                              placeholder="token"
+                            />
+                            {form.options.length > 1 && (
+                              <button type="button" onClick={() => removeOption(i)} className="text-red-500 hover:text-red-700 text-lg leading-none">×</button>
+                            )}
+                          </div>
+                        ))}
+                        <button type="button" onClick={addOption} className="px-3 py-1.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700">+ Token</button>
+                      </div>
+                    </div>
+
+                    {blankCount > 0 && (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">✅ Răspuns corect — token corect pentru fiecare blank</label>
+                        {synced.map((tok, i) => (
+                          <div key={i} className="flex items-center gap-2 mb-2">
+                            <span className="w-8 h-8 rounded-full bg-violet-600 text-white font-black text-sm flex items-center justify-center shrink-0">{i + 1}</span>
+                            <span className="text-sm text-slate-500 italic shrink-0">blank #{i + 1}</span>
+                            <select
+                              value={tok}
+                              onChange={e => {
+                                const arr = [...synced]; arr[i] = e.target.value
+                                update('correctAnswer', JSON.stringify(arr))
+                              }}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            >
+                              <option value="">— alege token —</option>
+                              {form.options.filter(o => o.trim()).map((o, j) => <option key={j} value={o}>{o}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                        {synced.filter(t => t.trim()).length === blankCount && (
+                          <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                            <p className="text-xs text-emerald-700 font-semibold mb-2">Preview răspuns complet:</p>
+                            <div className="flex flex-wrap gap-2 items-center">
+                              {form.description.split('___').map((part, i) => (
+                                <span key={i} className="flex items-center gap-1">
+                                  <span className="text-sm text-slate-700">{part}</span>
+                                  {i < blankCount && (
+                                    <span className="px-3 py-1 bg-violet-100 border-2 border-violet-400 rounded-lg text-sm font-black text-violet-800">
+                                      {synced[i]}
+                                    </span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })()}

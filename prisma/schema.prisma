@@ -908,7 +908,8 @@ enum ProblemType {
   INPUT_OUTPUT      // I/O — verifică output exact
   ORDER_IMAGES      // ordonare imagini
   FILL_IN           // completează spațiile (mai multe input-uri inline)
-  DRAG_BLOCKS       // trage blocuri/token-uri în locuri goale
+  DRAG_BLOCKS       // trage blocuri/token-uri în locuri goale (sloturi separate)
+  DRAG_INLINE       // trage token-uri direct în text (ex: 12 ___ + 36 ___ = ___)
 }
 
 model GeneratedSet {
