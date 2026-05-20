@@ -7,7 +7,6 @@ import toast from 'react-hot-toast'
 // ── Image Upload Button ─────────────────────────────────────────────────────────────────
 function ImageUploadButton({ textareaRef, value, onChange, folder = 'problems' }) {
   const fileRef = useRef(null)
-  const descRef = useRef(null)
   const [uploading, setUploading] = useState(false)
 
   async function handleFile(e) {
@@ -308,6 +307,7 @@ function handleTab(e, onChange) {
 // ── Main form ─────────────────────────────────────────────────────────────────
 export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, lessonId = null }) {
   const router = useRouter()
+  const descRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [tab, setTab] = useState('edit') // 'edit' | 'split' | 'preview'
   const isEdit = !!problem?.id
