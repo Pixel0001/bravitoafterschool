@@ -6,20 +6,20 @@ import AdminHeader from '@/components/admin/AdminHeader'
 import ImpersonationBanner from '@/components/ImpersonationBanner'
 
 export const metadata = {
-  title: 'PyWeb Admin',
-  description: 'Panou de administrare PyWeb Academy',
+  title: 'Bravito Admin',
+  description: 'Panou de administrare Bravito After School',
   manifest: '/manifest-admin.json',
   appleWebApp: {
     capable: true,
-    title: 'PyWeb Admin',
+    title: 'Bravito Admin',
     statusBarStyle: 'default',
   },
   other: {
     'mobile-web-app-capable': 'yes',
-    'application-name': 'PyWeb Admin',
+    'application-name': 'Bravito Admin',
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
-    'apple-mobile-web-app-title': 'PyWeb Admin',
+    'apple-mobile-web-app-title': 'Bravito Admin',
   },
 }
 

@@ -41,7 +41,7 @@ export const metadata = {
     "activitati extracurriculare IT copii",
     "cursuri digitale copii",
     "educatie digitala copii",
-    "PyWeb Academy",
+    "Bravito After School",
     "cursuri dupa scoala Chisinau"
   ],
   authors: [{ name: "Bravito After School" }],
@@ -52,14 +52,14 @@ export const metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://pyweb.online"),
+  metadataBase: new URL("https://bravitoafterschool.md"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Bravito After School - Cursuri pentru copii în Chișinău",
     description: "Cursuri de calitate pentru copii: programare, IT, matematică. Profesori calificați, grupe mici, primul curs gratuit.",
-    url: "https://pyweb.online",
+    url: "https://bravitoafterschool.md",
     siteName: "Bravito After School",
     locale: "ro_RO",
     type: "website",

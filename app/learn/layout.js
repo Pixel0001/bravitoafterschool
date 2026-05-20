@@ -4,7 +4,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'PyWeb Learn',
+    title: 'Bravito Learn',
   },
   other: {
     'mobile-web-app-capable': 'yes',
