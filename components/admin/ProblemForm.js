@@ -439,9 +439,35 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
   const addOption = () => setForm(f => ({ ...f, options: [...f.options, ''] }))
   const removeOption = (i) => setForm(f => ({ ...f, options: f.options.filter((_, idx) => idx !== i) }))
 
+  // ── DRAG_INLINE: builder vizual cu segmente text + blank ───────────────────
+  const initInlineParts = () => {
+    if (problem?.type === 'DRAG_INLINE' && problem?.description?.includes('___')) {
+      const textParts = problem.description.split('___')
+      let correct = []
+      try { correct = JSON.parse(problem.correctAnswer || '[]') } catch {}
+      return textParts.map((text, i) => ({
+        text,
+        blank: i < textParts.length - 1,
+        answer: correct[i] || '',
+      }))
+    }
+    return [{ text: '', blank: false, answer: '' }]
+  }
+  const [dragInlineParts, setDragInlineParts] = useState(initInlineParts)
+
+  const syncInlineParts = (parts) => {
+    setDragInlineParts(parts)
+    const desc = parts.map(p => p.text + (p.blank ? '___' : '')).join('')
+    const answers = parts.filter(p => p.blank).map(p => p.answer)
+    setForm(f => ({ ...f, description: desc, correctAnswer: JSON.stringify(answers) }))
+  }
+
   const submit = async (e) => {
     e.preventDefault()
-    if (!form.title || !form.description || !form.topic || !form.explanation) {
+    const descOk = form.type === 'DRAG_INLINE'
+      ? dragInlineParts.filter(p => p.blank).length > 0
+      : !!form.description
+    if (!form.title || !descOk || !form.topic || !form.explanation) {
       toast.error('Completează titlu, cerință, topic și explicație')
       return
     }
@@ -519,19 +545,28 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-sm font-medium text-gray-700">Cerință (descriere) *</label>
-                  <ImageUploadButton textareaRef={descRef} value={form.description} onChange={v => update('description', v)} />
+                  {form.type !== 'DRAG_INLINE' && <ImageUploadButton textareaRef={descRef} value={form.description} onChange={v => update('description', v)} />}
                 </div>
-                <textarea
-                  ref={descRef}
-                  value={form.description}
-                  onChange={e => update('description', e.target.value)}
-                  onKeyDown={e => handleTab(e, v => update('description', v))}
-                  rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed"
-                  placeholder={'Descrierea completă a problemei. Suportă markdown / cod.\n\nEx pentru cod pe mai multe rânduri:\n```python\nx = int(input())\nprint(x + 5)\n```'}
-                />
-                <MarkdownPreview text={form.description} />
-                {FMT_HINT}
+                {form.type === 'DRAG_INLINE' ? (
+                  <div className="bg-violet-50 border border-violet-200 rounded-lg px-4 py-3 text-sm text-violet-700">
+                    ℹ️ Câmpul de cerință este generat automat din <strong>builder-ul de mai jos</strong> (secțiunea „Răspuns corect").
+                    {form.description && <span className="ml-1 text-violet-500 font-mono text-xs">→ {form.description}</span>}
+                  </div>
+                ) : (
+                  <>
+                    <textarea
+                      ref={descRef}
+                      value={form.description}
+                      onChange={e => update('description', e.target.value)}
+                      onKeyDown={e => handleTab(e, v => update('description', v))}
+                      rows={8}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed"
+                      placeholder={'Descrierea completă a problemei. Suportă markdown / cod.\n\nEx pentru cod pe mai multe rânduri:\n```python\nx = int(input())\nprint(x + 5)\n```'}
+                    />
+                    <MarkdownPreview text={form.description} />
+                    {FMT_HINT}
+                  </>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -922,39 +957,122 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
               })()}
 
               {form.type === 'DRAG_INLINE' && (() => {
-                // Blank-urile sunt marcate cu ___ în câmpul de descriere
-                const blankCount = (form.description.match(/___/g) || []).length
-                let correct = []
-                try { correct = JSON.parse(form.correctAnswer || '[]') } catch {}
-                // Ensure correct array has same length as blank count
-                const synced = Array.from({ length: blankCount }, (_, i) => correct[i] || '')
+                const blankCount = dragInlineParts.filter(p => p.blank).length
+                let blankIdx = -1
+
+                const addSegment = (afterIdx, isBlank) => {
+                  const parts = [...dragInlineParts]
+                  parts.splice(afterIdx + 1, 0, { text: '', blank: isBlank, answer: '' })
+                  syncInlineParts(parts)
+                }
+                const removePart = (i) => {
+                  if (dragInlineParts.length <= 1) return
+                  syncInlineParts(dragInlineParts.filter((_, idx) => idx !== i))
+                }
+                const updateText = (i, val) => {
+                  syncInlineParts(dragInlineParts.map((p, idx) => idx === i ? { ...p, text: val } : p))
+                }
+                const updateAnswer = (i, val) => {
+                  syncInlineParts(dragInlineParts.map((p, idx) => idx === i ? { ...p, answer: val } : p))
+                }
 
                 return (
                   <div className="space-y-4">
                     <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 text-sm text-violet-900">
-                      🔗 <strong>Cum funcționează:</strong> Scrie sarcina în câmpul <em>Cerință</em> și pune{' '}
-                      <code className="bg-violet-100 px-1.5 py-0.5 rounded font-mono font-bold">___</code>{' '}
-                      (3 underscore-uri) acolo unde vrei blank-uri. Elevul va trage sau apăsa token-uri direct în text.
-                      <br />
-                      <strong>Exemplu:</strong>{' '}
-                      <code className="bg-violet-100 px-1.5 py-0.5 rounded font-mono">12 ___ 36 ___ 54 ___ = 23</code>
+                      🔗 <strong>Builder vizual</strong> — scrie textul și adaugă blank-uri direct în sarcină.
+                      Apasă <strong className="text-violet-700">+T</strong> pentru text și <strong className="text-violet-700">+[ ]</strong> pentru blank după fiecare segment.
                     </div>
 
-                    {blankCount === 0 && (
-                      <div className="bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 text-sm text-amber-800">
-                        ⚠️ Nu am detectat niciun <code className="font-mono font-bold">___</code> în descriere. Adaugă-le în câmpul „Cerință" de mai sus.
-                      </div>
-                    )}
+                    {/* Visual sentence builder */}
+                    <div className="border-2 border-violet-200 rounded-2xl bg-white p-4 space-y-2">
+                      <p className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-3">✏️ Construiește sarcina</p>
 
+                      {dragInlineParts.map((part, i) => {
+                        if (part.blank) blankIdx++
+                        const bi = part.blank ? blankIdx : -1
+                        return (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className={`mt-2.5 shrink-0 text-[10px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              part.blank ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {part.blank ? `blank #${bi + 1}` : 'text'}
+                            </span>
+
+                            {part.blank ? (
+                              <div className="flex-1 flex items-center gap-2 bg-violet-50 border-2 border-violet-300 rounded-xl px-3 py-2">
+                                <span className="text-violet-400 font-black text-lg select-none">[ ]</span>
+                                <select
+                                  value={part.answer}
+                                  onChange={e => updateAnswer(i, e.target.value)}
+                                  className="flex-1 px-2 py-1 border border-violet-300 rounded-lg text-sm bg-white"
+                                >
+                                  <option value="">— răspuns corect —</option>
+                                  {form.options.filter(o => o.trim()).map((o, j) => (
+                                    <option key={j} value={o}>{o}</option>
+                                  ))}
+                                </select>
+                                {part.answer && (
+                                  <span className="px-2 py-1 bg-violet-600 text-white rounded-lg text-xs font-black">{part.answer}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                value={part.text}
+                                onChange={e => updateText(i, e.target.value)}
+                                className="flex-1 px-3 py-2 border-2 border-slate-200 rounded-xl text-sm focus:border-violet-400 focus:outline-none"
+                                placeholder={i === 0 ? 'ex: 12  +  36  +  54  =' : 'continuare text...'}
+                              />
+                            )}
+
+                            <div className="flex gap-1 mt-1.5 shrink-0">
+                              <button type="button" onClick={() => addSegment(i, false)}
+                                title="Adaugă text după"
+                                className="px-2 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-300 transition">
+                                +T
+                              </button>
+                              <button type="button" onClick={() => addSegment(i, true)}
+                                title="Adaugă blank [ ] după"
+                                className="px-2 py-1 text-[11px] font-bold bg-violet-100 hover:bg-violet-200 text-violet-700 rounded-lg border border-violet-300 transition">
+                                +[ ]
+                              </button>
+                              {dragInlineParts.length > 1 && (
+                                <button type="button" onClick={() => removePart(i)}
+                                  className="px-2 py-1 text-[11px] font-bold bg-red-50 hover:bg-red-100 text-red-500 rounded-lg border border-red-200 transition">
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Preview */}
                     {blankCount > 0 && (
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2 text-sm text-emerald-800">
-                        ✅ {blankCount} blank{blankCount !== 1 ? '-uri' : ''} detectat{blankCount !== 1 ? 'e' : ''} în descriere.
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">👁️ Preview elev</p>
+                        <div className="flex flex-wrap items-center gap-1 text-base font-semibold text-slate-800">
+                          {(() => { let bi2 = -1; return dragInlineParts.map((p, i) => {
+                            if (p.blank) bi2++
+                            return (
+                              <span key={i} className="flex items-center gap-1">
+                                <span>{p.text}</span>
+                                {p.blank && (
+                                  p.answer
+                                    ? <span className="px-3 py-1 bg-violet-100 border-2 border-violet-400 rounded-lg font-black text-violet-800">{p.answer}</span>
+                                    : <span className="px-4 py-1 border-2 border-dashed border-violet-300 rounded-lg text-violet-300 font-black">?</span>
+                                )}
+                              </span>
+                            )
+                          })})()}
+                        </div>
                       </div>
                     )}
 
+                    {/* Token pool config */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">🎴 Token-uri disponibile (ce vede elevul)</label>
-                      <div className="flex flex-wrap gap-2 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">🎴 Token-uri disponibile (ce vede elevul în pool)</label>
+                      <div className="flex flex-wrap gap-2">
                         {form.options.map((tok, i) => (
                           <div key={i} className="flex items-center gap-1 bg-violet-100 border border-violet-300 rounded-xl px-3 py-1.5">
                             <input
@@ -968,49 +1086,11 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
                             )}
                           </div>
                         ))}
-                        <button type="button" onClick={addOption} className="px-3 py-1.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700">+ Token</button>
+                        <button type="button" onClick={addOption}
+                          className="px-3 py-1.5 bg-violet-600 text-white rounded-xl text-sm font-semibold hover:bg-violet-700">+ Token</button>
                       </div>
+                      <p className="text-xs text-slate-400 mt-2">💡 Adaugă token-uri corecte + distractor-i (răspunsuri greșite) pentru mai multă dificultate.</p>
                     </div>
-
-                    {blankCount > 0 && (
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">✅ Răspuns corect — token corect pentru fiecare blank</label>
-                        {synced.map((tok, i) => (
-                          <div key={i} className="flex items-center gap-2 mb-2">
-                            <span className="w-8 h-8 rounded-full bg-violet-600 text-white font-black text-sm flex items-center justify-center shrink-0">{i + 1}</span>
-                            <span className="text-sm text-slate-500 italic shrink-0">blank #{i + 1}</span>
-                            <select
-                              value={tok}
-                              onChange={e => {
-                                const arr = [...synced]; arr[i] = e.target.value
-                                update('correctAnswer', JSON.stringify(arr))
-                              }}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                            >
-                              <option value="">— alege token —</option>
-                              {form.options.filter(o => o.trim()).map((o, j) => <option key={j} value={o}>{o}</option>)}
-                            </select>
-                          </div>
-                        ))}
-                        {synced.filter(t => t.trim()).length === blankCount && (
-                          <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                            <p className="text-xs text-emerald-700 font-semibold mb-2">Preview răspuns complet:</p>
-                            <div className="flex flex-wrap gap-2 items-center">
-                              {form.description.split('___').map((part, i) => (
-                                <span key={i} className="flex items-center gap-1">
-                                  <span className="text-sm text-slate-700">{part}</span>
-                                  {i < blankCount && (
-                                    <span className="px-3 py-1 bg-violet-100 border-2 border-violet-400 rounded-lg text-sm font-black text-violet-800">
-                                      {synced[i]}
-                                    </span>
-                                  )}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )
               })()}
