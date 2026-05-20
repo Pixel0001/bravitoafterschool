@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 // ── Image Upload Button ─────────────────────────────────────────────────────────────────
 function ImageUploadButton({ textareaRef, value, onChange, folder = 'problems' }) {
   const fileRef = useRef(null)
+  const descRef = useRef(null)
   const [uploading, setUploading] = useState(false)
 
   async function handleFile(e) {
