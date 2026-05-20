@@ -1240,7 +1240,9 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                   </div>
 
                   <div className="p-5 sm:p-6 space-y-4">
-                    <Markdown text={cur.description} className="text-base text-slate-700 leading-relaxed" />
+                    {cur.type !== 'DRAG_INLINE' && (
+                      <Markdown text={cur.description} className="text-base text-slate-700 leading-relaxed" />
+                    )}
 
                     {/* Soluția — afișată dacă elevul a apăsat „Vezi rezolvarea" */}
                     {curSolutionViewed && solutionData[cur.id] && (
