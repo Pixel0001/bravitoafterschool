@@ -1271,7 +1271,7 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                                 <><LockClosedIcon className="w-5 h-5 text-rose-600" /><span className="text-rose-800">Încercări epuizate — 0p</span></>
                               )}
                               {typeof curSub.grade === 'number' && (
-                                <span className="ml-auto text-sm">Nota: <strong className="text-lg">{Math.round((cur.points ?? 10) * (curSub.grade ?? 0) / 100)}/{cur.points ?? 10}</strong> <span className="text-slate-400 text-xs">({curSub.grade}%)</span></span>
+                                <span className="ml-auto text-sm text-slate-700">Nota: <strong className="text-lg text-slate-900">{Math.round((cur.points ?? 10) * (curSub.grade ?? 0) / 100)}/{cur.points ?? 10}</strong> <span className="text-slate-500 text-xs">({curSub.grade}%)</span></span>
                               )}
                             </div>
                             {curSub.feedback && (
@@ -1498,15 +1498,18 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                         )}
 
                         {cur.type === 'ORDER_IMAGES' && (
-                          <div className="space-y-2">
-                            <p className="text-xs text-[#a0b8bc] mb-2">🖼️ Trage sau folosește săgețile ca să aranjezi imaginile în ordinea corectă.</p>
+                          <div className="space-y-3">
+                            <div className="bg-[#e8f7f9] border border-[#30919f]/30 rounded-xl px-4 py-3 text-sm text-[#136976] font-medium">
+                              🖼️ <strong>Aranjază imaginile</strong> în ordinea corectă folosind săgețile sau tragequ-le (drag).
+                            </div>
                             {orderItems.map((url, i) => (
                               <div
-                                key={url}
+                                key={`${url}-${i}`}
                                 draggable
-                                onDragStart={() => { dragRef.current = i }}
-                                onDragOver={e => e.preventDefault()}
-                                onDrop={() => {
+                                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; dragRef.current = i }}
+                                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                                onDrop={e => {
+                                  e.preventDefault()
                                   const from = dragRef.current
                                   if (from === null || from === i) return
                                   const arr = [...orderItems]
@@ -1517,23 +1520,51 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                                   dragRef.current = null
                                 }}
                                 onDragEnd={() => { dragRef.current = null }}
-                                className="flex items-center gap-3 bg-white border-2 border-slate-200 rounded-xl p-2 cursor-grab active:cursor-grabbing select-none"
+                                className="flex items-stretch bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-[#30919f]/50 transition cursor-grab active:cursor-grabbing active:shadow-md active:border-[#30919f] active:scale-[1.01]"
                               >
-                                <div className="flex flex-col gap-0.5 shrink-0">
-                                  <button type="button" disabled={i === 0} onClick={() => {
-                                    const arr = [...orderItems]
-                                    ;[arr[i-1], arr[i]] = [arr[i], arr[i-1]]
-                                    setOrderItems(arr); setAnswer(JSON.stringify(arr))
-                                  }} className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs disabled:opacity-30">▲</button>
-                                  <button type="button" disabled={i === orderItems.length - 1} onClick={() => {
-                                    const arr = [...orderItems]
-                                    ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
-                                    setOrderItems(arr); setAnswer(JSON.stringify(arr))
-                                  }} className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs disabled:opacity-30">▼</button>
+                                {/* Nr. ordine */}
+                                <div className="w-14 bg-gradient-to-b from-[#30919f] to-[#136976] flex items-center justify-center shrink-0">
+                                  <span className="text-white font-black text-2xl">{i + 1}</span>
                                 </div>
-                                <span className="text-xs font-bold text-[#30919f] w-5 shrink-0">{i+1}</span>
-                                <img src={url} alt={`img-${i}`} className="w-24 h-24 object-cover rounded-lg border border-slate-200 shrink-0" />
-                                <span className="text-slate-400 text-xs">≡ trage</span>
+                                {/* Imagine */}
+                                <div className="flex-1 min-h-[120px]">
+                                  <img
+                                    src={url}
+                                    alt={`Imagine ${i + 1}`}
+                                    className="w-full h-full object-cover"
+                                    style={{ minHeight: 120, maxHeight: 200 }}
+                                  />
+                                </div>
+                                {/* Butoane sus/jos */}
+                                <div className="flex flex-col shrink-0 border-l-2 border-slate-100">
+                                  <button
+                                    type="button"
+                                    disabled={i === 0}
+                                    onClick={() => {
+                                      const arr = [...orderItems];[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
+                                      setOrderItems(arr); setAnswer(JSON.stringify(arr))
+                                    }}
+                                    className="flex-1 w-14 flex items-center justify-center bg-[#30919f] hover:bg-[#136976] disabled:bg-slate-100 transition"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-6 h-6 ${i === 0 ? 'text-slate-300' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                                    </svg>
+                                  </button>
+                                  <div className="h-px bg-slate-100" />
+                                  <button
+                                    type="button"
+                                    disabled={i === orderItems.length - 1}
+                                    onClick={() => {
+                                      const arr = [...orderItems];[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
+                                      setOrderItems(arr); setAnswer(JSON.stringify(arr))
+                                    }}
+                                    className="flex-1 w-14 flex items-center justify-center bg-[#30919f] hover:bg-[#136976] disabled:bg-slate-100 transition"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-6 h-6 ${i === orderItems.length - 1 ? 'text-slate-300' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1541,10 +1572,13 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
 
                         {cur.type === 'FILL_IN' && (
                           <div className="space-y-3">
-                            <p className="text-xs text-[#a0b8bc]">✏️ Completează spațiile libere.</p>
+                            <div className="bg-[#e8f7f9] border border-[#30919f]/30 rounded-xl px-4 py-3 text-sm text-[#136976] font-medium">
+                              ✏️ Completează spațiile libere cu răspunsul corect.
+                            </div>
                             {cur.options?.map((label, i) => (
-                              <div key={i} className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm text-slate-700">{label}</span>
+                              <div key={i} className="flex items-center gap-3 bg-white border-2 border-slate-200 rounded-xl px-4 py-3 flex-wrap">
+                                <span className="w-7 h-7 rounded-full bg-[#30919f] text-white font-black text-sm flex items-center justify-center shrink-0">{i + 1}</span>
+                                <span className="text-base text-slate-800 font-medium flex-1 min-w-[120px]">{label}</span>
                                 <input
                                   value={fillAnswers[i] || ''}
                                   onChange={e => {
@@ -1552,8 +1586,8 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                                     setFillAnswers(arr)
                                     setAnswer(JSON.stringify(arr))
                                   }}
-                                  className="w-32 px-3 py-1.5 border-2 border-[#30919f] bg-teal-50 rounded-lg text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-200 transition"
-                                  placeholder="..."
+                                  className="w-40 px-4 py-2.5 border-2 border-[#30919f] bg-teal-50 rounded-xl text-base font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-300 transition placeholder-slate-400"
+                                  placeholder="răspuns..."
                                 />
                               </div>
                             ))}
