@@ -60,6 +60,12 @@ export async function DELETE(_req, { params }) {
 
   const { id } = await params
   try {
+    // Ștergem mai întâi înregistrările copil (MongoDB nu face cascade automat)
+    await Promise.all([
+      prisma.problemAttempt.deleteMany({ where: { problemId: id } }),
+      prisma.problemSubmission.deleteMany({ where: { problemId: id } }),
+      prisma.setProblem.deleteMany({ where: { problemId: id } }),
+    ])
     await prisma.problem.delete({ where: { id } })
     revalidateTag('problems')
     revalidateTag('lessons')
