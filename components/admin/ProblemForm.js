@@ -308,6 +308,7 @@ function handleTab(e, onChange) {
 export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, lessonId = null }) {
   const router = useRouter()
   const descRef = useRef(null)
+  const explRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [tab, setTab] = useState('edit') // 'edit' | 'split' | 'preview'
   const isEdit = !!problem?.id
