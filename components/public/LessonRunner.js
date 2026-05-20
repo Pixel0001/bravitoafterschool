@@ -1500,69 +1500,78 @@ export default function LessonRunner({ token, lesson, problems, initialProgress,
                         {cur.type === 'ORDER_IMAGES' && (
                           <div className="space-y-3">
                             <div className="bg-[#e8f7f9] border border-[#30919f]/30 rounded-xl px-4 py-3 text-sm text-[#136976] font-medium">
-                              🖼️ <strong>Aranjază imaginile</strong> în ordinea corectă folosind săgețile sau tragequ-le (drag).
+                              🖼️ <strong>Aranjează imaginile</strong> în ordinea corectă — folosește săgețile sau trage (drag &amp; drop).
                             </div>
                             {orderItems.map((url, i) => (
-                              <div
-                                key={`${url}-${i}`}
-                                draggable
-                                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; dragRef.current = i }}
-                                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-                                onDrop={e => {
-                                  e.preventDefault()
-                                  const from = dragRef.current
-                                  if (from === null || from === i) return
-                                  const arr = [...orderItems]
-                                  const [item] = arr.splice(from, 1)
-                                  arr.splice(i, 0, item)
-                                  setOrderItems(arr)
-                                  setAnswer(JSON.stringify(arr))
-                                  dragRef.current = null
-                                }}
-                                onDragEnd={() => { dragRef.current = null }}
-                                className="flex items-stretch bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-[#30919f]/50 transition cursor-grab active:cursor-grabbing active:shadow-md active:border-[#30919f] active:scale-[1.01]"
-                              >
-                                {/* Nr. ordine */}
-                                <div className="w-14 bg-gradient-to-b from-[#30919f] to-[#136976] flex items-center justify-center shrink-0">
-                                  <span className="text-white font-black text-2xl">{i + 1}</span>
-                                </div>
-                                {/* Imagine 16:9 */}
-                                <div className="flex-1 relative" style={{ aspectRatio: '16/9' }}>
-                                  <img
-                                    src={url}
-                                    alt={`Imagine ${i + 1}`}
-                                    className="absolute inset-0 w-full h-full object-cover"
-                                  />
-                                </div>
-                                {/* Butoane sus/jos */}
-                                <div className="flex flex-col shrink-0 border-l-2 border-slate-100">
-                                  <button
-                                    type="button"
-                                    disabled={i === 0}
-                                    onClick={() => {
-                                      const arr = [...orderItems];[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
-                                      setOrderItems(arr); setAnswer(JSON.stringify(arr))
-                                    }}
-                                    className="flex-1 w-14 flex items-center justify-center bg-[#30919f] hover:bg-[#136976] disabled:bg-slate-100 transition"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-6 h-6 ${i === 0 ? 'text-slate-300' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                                    </svg>
-                                  </button>
-                                  <div className="h-px bg-slate-100" />
-                                  <button
-                                    type="button"
-                                    disabled={i === orderItems.length - 1}
-                                    onClick={() => {
-                                      const arr = [...orderItems];[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
-                                      setOrderItems(arr); setAnswer(JSON.stringify(arr))
-                                    }}
-                                    className="flex-1 w-14 flex items-center justify-center bg-[#30919f] hover:bg-[#136976] disabled:bg-slate-100 transition"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-6 h-6 ${i === orderItems.length - 1 ? 'text-slate-300' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                  </button>
+                              <div key={`${url}-${i}`} className="flex justify-center">
+                                <div
+                                  draggable
+                                  onDragStart={e => {
+                                    e.dataTransfer.effectAllowed = 'move'
+                                    e.dataTransfer.setData('text/plain', String(i))
+                                    dragRef.current = i
+                                  }}
+                                  onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+                                  onDrop={e => {
+                                    e.preventDefault()
+                                    const from = dragRef.current ?? Number(e.dataTransfer.getData('text/plain'))
+                                    if (from === i) return
+                                    const arr = [...orderItems]
+                                    const [item] = arr.splice(from, 1)
+                                    arr.splice(i, 0, item)
+                                    setOrderItems(arr)
+                                    setAnswer(JSON.stringify(arr))
+                                    dragRef.current = null
+                                  }}
+                                  onDragEnd={() => { dragRef.current = null }}
+                                  className="flex items-stretch bg-white border-2 border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-[#30919f]/60 hover:shadow-md transition cursor-grab active:cursor-grabbing active:border-[#30919f] active:scale-[1.02] active:shadow-lg"
+                                  style={{ width: '50%' }}
+                                >
+                                  {/* Nr. ordine */}
+                                  <div className="w-12 bg-gradient-to-b from-[#30919f] to-[#136976] flex items-center justify-center shrink-0 pointer-events-none">
+                                    <span className="text-white font-black text-xl">{i + 1}</span>
+                                  </div>
+                                  {/* Imagine 16:9 */}
+                                  <div className="flex-1 relative pointer-events-none" style={{ aspectRatio: '16/9' }}>
+                                    <img
+                                      src={url}
+                                      alt={`Imagine ${i + 1}`}
+                                      className="absolute inset-0 w-full h-full object-cover"
+                                      draggable={false}
+                                    />
+                                  </div>
+                                  {/* Butoane sus/jos */}
+                                  <div className="flex flex-col shrink-0 border-l-2 border-slate-100">
+                                    <button
+                                      type="button"
+                                      disabled={i === 0}
+                                      onClick={e => {
+                                        e.stopPropagation()
+                                        const arr = [...orderItems];[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
+                                        setOrderItems(arr); setAnswer(JSON.stringify(arr))
+                                      }}
+                                      className="flex-1 w-12 flex items-center justify-center bg-[#30919f] hover:bg-[#136976] disabled:bg-slate-100 transition"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 ${i === 0 ? 'text-slate-300' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                                      </svg>
+                                    </button>
+                                    <div className="h-px bg-slate-100" />
+                                    <button
+                                      type="button"
+                                      disabled={i === orderItems.length - 1}
+                                      onClick={e => {
+                                        e.stopPropagation()
+                                        const arr = [...orderItems];[arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
+                                        setOrderItems(arr); setAnswer(JSON.stringify(arr))
+                                      }}
+                                      className="flex-1 w-12 flex items-center justify-center bg-[#30919f] hover:bg-[#136976] disabled:bg-slate-100 transition"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className={`w-5 h-5 ${i === orderItems.length - 1 ? 'text-slate-300' : 'text-white'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ))}
