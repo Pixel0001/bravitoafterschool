@@ -906,6 +906,8 @@ enum ProblemType {
   SHORT_ANSWER      // răspuns scurt text
   CODING            // cod
   INPUT_OUTPUT      // I/O — verifică output exact
+  ORDER_IMAGES      // ordonare imagini
+  FILL_IN           // completează spațiile (mai multe input-uri inline)
 }
 
 model GeneratedSet {

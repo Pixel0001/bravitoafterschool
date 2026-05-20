@@ -208,6 +208,43 @@ function ProblemStudentPreview({ form }) {
           </div>
         )}
 
+        {form.type === 'ORDER_IMAGES' && (() => {
+          const imgs = (form.options || []).filter(u => u.trim())
+          if (!imgs.length) return <p className="text-sm text-slate-400 italic">Adaugă imagini pentru a vedea preview-ul.</p>
+          return (
+            <div className="space-y-2">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ordonare imagini (amestecate pentru elev)</p>
+              {imgs.map((url, i) => (
+                <div key={i} className="flex items-center gap-3 bg-slate-50 border-2 border-slate-200 rounded-xl p-2">
+                  <div className="flex flex-col gap-0.5">
+                    <button type="button" disabled className="w-7 h-7 flex items-center justify-center bg-slate-200 rounded text-xs opacity-50">▲</button>
+                    <button type="button" disabled className="w-7 h-7 flex items-center justify-center bg-slate-200 rounded text-xs opacity-50">▼</button>
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 w-5">{i+1}</span>
+                  <img src={url} alt={`img-${i}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
+        {form.type === 'FILL_IN' && (() => {
+          const questions = (form.options || []).filter(q => q.trim())
+          if (!questions.length) return <p className="text-sm text-slate-400 italic">Adaugă întrebări pentru a vedea preview-ul.</p>
+          return (
+            <div className="space-y-3">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Completează spațiile</p>
+              {questions.map((q, i) => (
+                <div key={i} className="flex items-center gap-2 flex-wrap bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <span className="text-sm font-bold text-slate-500">{i+1}.</span>
+                  <span className="text-sm text-slate-700">{q}</span>
+                  <input readOnly placeholder="..." className="border-b-2 border-indigo-400 bg-transparent px-2 py-1 text-sm w-20 focus:outline-none text-center" />
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
         {/* Buttons */}
         <div className="flex flex-wrap gap-2 pt-1">
           {form.hint?.trim() && (
@@ -277,6 +314,8 @@ const TYPES = [
   { value: 'SHORT_ANSWER', label: 'Răspuns scurt (text)' },
   { value: 'INPUT_OUTPUT', label: 'Input / Output' },
   { value: 'CODING', label: 'Cod (verifică output)' },
+  { value: 'ORDER_IMAGES', label: 'Ordonare imagini' },
+  { value: 'FILL_IN', label: 'Completează spațiile' },
 ]
 
 const FMT_HINT = (
@@ -352,7 +391,12 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
     try {
       const payload = {
         ...form,
-        options: (form.type === 'MULTIPLE_CHOICE' || form.type === 'MULTIPLE_SELECT') ? form.options.filter(o => o.trim()) : [],
+        options: ['MULTIPLE_CHOICE','MULTIPLE_SELECT','ORDER_IMAGES','FILL_IN'].includes(form.type)
+          ? form.options.filter(o => o.trim())
+          : [],
+        correctAnswer: form.type === 'ORDER_IMAGES'
+          ? JSON.stringify(form.options.filter(o => o.trim()).map((_, i) => i))
+          : form.correctAnswer,
         tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
         courseId: form.courseId || null,
         lessonId: lessonId || null,

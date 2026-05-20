@@ -6,7 +6,15 @@ import toast from 'react-hot-toast'
 const DIFF = { EASY: { label: '🟢 Ușor', color: 'bg-green-100 text-green-700' },
               MEDIUM: { label: '🟡 Mediu', color: 'bg-yellow-100 text-yellow-700' },
               HARD: { label: '🔴 Greu', color: 'bg-red-100 text-red-700' } }
-
+function seededShuffle(arr, seed) {
+  let s = seed
+  for (let i = arr.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff
+    const j = s % (i + 1);
+    [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
 function fmtTime(seconds) {
   if (seconds == null) return '—'
   const m = Math.floor(seconds / 60)
@@ -24,6 +32,8 @@ export default function SolveSet({ token }) {
   const [showExplanation, setShowExplanation] = useState(false)
   const [feedback, setFeedback] = useState(null) // { isCorrect, explanation, correctAnswer }
   const [timer, setTimer] = useState(0) // secunde elapsed pe problema curentă
+  const [orderItems, setOrderItems] = useState([]) // pentru ORDER_IMAGES
+  const [fillAnswers, setFillAnswers] = useState([]) // pentru FILL_IN
   const startRef = useRef(Date.now())
   const codeAreaRef = useRef(null)
 
@@ -113,6 +123,24 @@ export default function SolveSet({ token }) {
     if (data?.problems?.[currentIdx]?.attempt) {
       setAnswer(data.problems[currentIdx].attempt.answer || '')
     }
+    // Init ORDER_IMAGES: amestecă imaginile
+    const prob = data?.problems?.[currentIdx]
+    if (prob?.type === 'ORDER_IMAGES' && prob.options?.length) {
+      const seed = prob.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+      const shuffled = seededShuffle([...prob.options], seed)
+      setOrderItems(shuffled)
+      setAnswer(JSON.stringify(shuffled))
+    } else {
+      setOrderItems([])
+    }
+    // Init FILL_IN
+    if (prob?.type === 'FILL_IN' && prob.options?.length) {
+      const blanks = new Array(prob.options.length).fill('')
+      setFillAnswers(blanks)
+      setAnswer('[]')
+    } else {
+      setFillAnswers([])
+    }
   }, [currentIdx, data?.set?.id])
 
   // Timer per problemă
@@ -158,7 +186,12 @@ export default function SolveSet({ token }) {
   const policy = set.explanationPolicy
 
   const submitAnswer = async () => {
-    if (!answer.trim()) {
+    const isAnswerEmpty = () => {
+      if (current.type === 'ORDER_IMAGES') return orderItems.length === 0
+      if (current.type === 'FILL_IN') return fillAnswers.every(a => !a?.trim())
+      return !answer.trim()
+    }
+    if (isAnswerEmpty()) {
       toast.error('Scrie un răspuns')
       return
     }
@@ -324,6 +357,61 @@ export default function SolveSet({ token }) {
                     />
                     <span className="text-sm text-gray-800 flex-1">{opt}</span>
                   </label>
+                ))}
+              </div>
+            ) : current.type === 'ORDER_IMAGES' ? (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500 font-medium">Aranjă imaginile în ordinea corectă folosind săgețile ▲▼</p>
+                {orderItems.map((url, i) => (
+                  <div key={url} className="flex items-center gap-3 bg-white border-2 border-gray-200 rounded-xl p-2 transition hover:border-indigo-300">
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        disabled={i === 0 || current.attempt?.isCorrect}
+                        onClick={() => {
+                          const arr = [...orderItems]
+                          ;[arr[i], arr[i-1]] = [arr[i-1], arr[i]]
+                          setOrderItems(arr)
+                          setAnswer(JSON.stringify(arr))
+                        }}
+                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-indigo-100 rounded-lg text-sm font-bold disabled:opacity-30 transition">
+                        ▲
+                      </button>
+                      <button
+                        disabled={i === orderItems.length - 1 || current.attempt?.isCorrect}
+                        onClick={() => {
+                          const arr = [...orderItems]
+                          ;[arr[i], arr[i+1]] = [arr[i+1], arr[i]]
+                          setOrderItems(arr)
+                          setAnswer(JSON.stringify(arr))
+                        }}
+                        className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-indigo-100 rounded-lg text-sm font-bold disabled:opacity-30 transition">
+                        ▼
+                      </button>
+                    </div>
+                    <span className="text-sm font-bold text-slate-400 w-6 text-center shrink-0">{i+1}</span>
+                    <img src={url} alt={`poz-${i+1}`} className="w-24 h-24 object-cover rounded-xl border border-gray-200 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            ) : current.type === 'FILL_IN' ? (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500 font-medium">Completează spațiile libere:</p>
+                {(current.options || []).map((q, i) => (
+                  <div key={i} className="flex items-center gap-2 flex-wrap bg-slate-50 rounded-xl p-3 border border-gray-200">
+                    <span className="text-sm font-semibold text-slate-500 shrink-0">{i+1}.</span>
+                    <span className="text-sm text-gray-800">{q}</span>
+                    <input
+                      value={fillAnswers[i] || ''}
+                      onChange={e => {
+                        const arr = [...fillAnswers]; arr[i] = e.target.value
+                        setFillAnswers(arr)
+                        setAnswer(JSON.stringify(arr))
+                      }}
+                      disabled={current.attempt?.isCorrect}
+                      className="border-b-2 border-indigo-400 bg-transparent px-2 py-1 text-sm w-20 focus:outline-none focus:border-indigo-600 text-center font-semibold"
+                      placeholder="..."
+                    />
+                  </div>
                 ))}
               </div>
             ) : current.type === 'CODING' ? (
