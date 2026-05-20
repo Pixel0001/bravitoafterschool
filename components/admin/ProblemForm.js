@@ -14,8 +14,9 @@ function ImageUploadButton({ textareaRef, value, onChange, folder = 'problems' }
     if (!file) return
     setUploading(true)
     try {
+      const compressed = await compressImage(file)
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', compressed)
       fd.append('folder', folder)
       const r = await fetch('/api/admin/upload', { method: 'POST', body: fd })
       const d = await r.json()
@@ -45,6 +46,61 @@ function ImageUploadButton({ textareaRef, value, onChange, folder = 'problems' }
       uploading ? 'opacity-50 pointer-events-none' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
     }`}>
       📷 {uploading ? 'Încarcă...' : 'Upload imagine'}
+      <input type="file" accept="image/*" className="hidden" ref={fileRef} onChange={handleFile} disabled={uploading} />
+    </label>
+  )
+}
+
+async function compressImage(file, maxPx = 1200, quality = 0.85) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxPx || height > maxPx) {
+        if (width > height) { height = Math.round(height * maxPx / width); width = maxPx }
+        else { width = Math.round(width * maxPx / height); height = maxPx }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        blob => resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' })),
+        'image/webp', quality
+      )
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
+function ImageUploadSlot({ onUploaded, folder = 'problems' }) {
+  const fileRef = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const compressed = await compressImage(file)
+      const fd = new FormData()
+      fd.append('file', compressed)
+      fd.append('folder', folder)
+      const r = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+      const d = await r.json()
+      if (!d.url) { toast.error(d.error || 'Eroare upload'); return }
+      onUploaded(d.url)
+      toast.success('Imagine încărcată!')
+    } catch { toast.error('Eroare la upload') } finally {
+      setUploading(false); e.target.value = ''
+    }
+  }
+  return (
+    <label className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition border shrink-0 ${
+      uploading ? 'opacity-50 pointer-events-none bg-slate-50 border-slate-200 text-slate-400' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300'
+    }`}>
+      📷 {uploading ? 'Încărcă...' : 'Upload'}
       <input type="file" accept="image/*" className="hidden" ref={fileRef} onChange={handleFile} disabled={uploading} />
     </label>
   )
@@ -697,6 +753,100 @@ export default function ProblemForm({ problem, courses = [], apiUrl, backUrl, le
                   </div>
                 </>
               )}
+
+              {form.type === 'ORDER_IMAGES' && (() => {
+                const moveImg = (from, to) => {
+                  const arr = [...form.options]
+                  const [item] = arr.splice(from, 1)
+                  arr.splice(to, 0, item)
+                  update('options', arr)
+                }
+                return (
+                  <div className="space-y-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                      💡 <strong>Cum funcționează:</strong> Încărcă imaginile și aranjă-le în ordinea corectă cu săgețile.
+                      <strong> Ordinea de mai jos = răspunsul corect.</strong> Elevul vede imaginile amestecate aleator.
+                    </div>
+                    {form.options.map((url, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2">
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <button type="button" disabled={i === 0} onClick={() => moveImg(i, i - 1)}
+                            className="w-7 h-7 flex items-center justify-center bg-white border border-slate-300 rounded text-xs hover:bg-slate-100 disabled:opacity-30">▲</button>
+                          <button type="button" disabled={i === form.options.length - 1} onClick={() => moveImg(i, i + 1)}
+                            className="w-7 h-7 flex items-center justify-center bg-white border border-slate-300 rounded text-xs hover:bg-slate-100 disabled:opacity-30">▼</button>
+                        </div>
+                        <span className="text-sm font-bold text-indigo-600 w-7 text-center shrink-0">#{i+1}</span>
+                        {url.trim()
+                          ? <img src={url} alt={`img-${i}`} className="w-20 h-20 object-cover rounded-lg border border-slate-200 shrink-0" />
+                          : <div className="w-20 h-20 rounded-lg border-2 border-dashed border-slate-300 bg-slate-100 flex items-center justify-center shrink-0"><span className="text-slate-400 text-[10px] text-center px-1">Fără imagine</span></div>
+                        }
+                        <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                          <input
+                            value={url}
+                            onChange={e => updateOption(i, e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
+                            placeholder="URL imagine (sau apasă Upload)"
+                          />
+                          <ImageUploadSlot onUploaded={imgUrl => updateOption(i, imgUrl)} folder="problems" />
+                        </div>
+                        {form.options.length > 2 && (
+                          <button type="button" onClick={() => removeOption(i)}
+                            className="text-red-600 hover:text-red-700 px-2 text-lg shrink-0">×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={addOption}
+                      className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Adaugă imagine</button>
+                    {form.options.filter(o => o.trim()).length >= 2 && (
+                      <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                        ✅ {form.options.filter(o => o.trim()).length} imagini. Ordinea de mai sus = răspunsul corect.
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {form.type === 'FILL_IN' && (() => {
+                let answers = []
+                try { answers = JSON.parse(form.correctAnswer || '[]') } catch {}
+                const syncedAnswers = form.options.map((_, i) => answers[i] !== undefined ? answers[i] : '')
+                const updateFillAnswer = (i, val) => {
+                  const arr = [...syncedAnswers]; arr[i] = val
+                  update('correctAnswer', JSON.stringify(arr))
+                }
+                return (
+                  <div className="space-y-3">
+                    <p className="text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2">
+                      ✏️ Scrie întrebarea la stânga (ex: „2 + 5 + 1 =”) și răspunsul corect la dreapta (verde).
+                    </p>
+                    {form.options.map((q, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-400 shrink-0 w-6">{i+1}.</span>
+                        <input value={q} onChange={e => updateOption(i, e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="ex: 2 + 5 + 1 =" />
+                        <span className="text-slate-400 text-sm shrink-0">→</span>
+                        <input value={syncedAnswers[i]} onChange={e => updateFillAnswer(i, e.target.value)}
+                          className="w-28 px-3 py-2 border border-green-400 bg-green-50 rounded-lg text-sm font-mono text-green-800"
+                          placeholder="răspuns" />
+                        {form.options.length > 1 && (
+                          <button type="button" onClick={() => {
+                            removeOption(i)
+                            update('correctAnswer', JSON.stringify(syncedAnswers.filter((_, idx) => idx !== i)))
+                          }} className="text-red-600 hover:text-red-700 px-2 text-lg">×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => {
+                      addOption()
+                      update('correctAnswer', JSON.stringify([...syncedAnswers, '']))
+                    }} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">+ Adaugă rând</button>
+                    {syncedAnswers.filter(a => a.trim()).length > 0 && (
+                      <p className="text-xs text-green-700 font-medium">✅ Răspunsuri setate: {syncedAnswers.filter(a => a.trim()).length}/{form.options.length}</p>
+                    )}
+                  </div>
+                )
+              })()}
             </section>
 
             {/* Explicație + hint */}
