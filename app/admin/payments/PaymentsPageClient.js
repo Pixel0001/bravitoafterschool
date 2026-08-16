@@ -671,7 +671,9 @@ export default function PaymentsPage() {
   const currentMonth = new Date().getMonth()
   
   // Filter data based on payment method, branch, teacher, and selected months
-  const filterPayment = (p) => {
+  // ignoreTeacherFilter: pentru „Profit adus de profesori", unde cardurile SUNT
+  // selectorul de profesor — altfel, la selectarea unuia ar dispărea toate celelalte
+  const filterPayment = (p, { ignoreTeacherFilter = false } = {}) => {
     // Filter by source
     if (sourceFilter !== 'all' && p.source !== sourceFilter) return false
     // Filter by payment method
@@ -699,7 +701,7 @@ export default function PaymentsPage() {
       }
     }
     // Filter by teachers (who created the payment)
-    if (selectedTeachers.length > 0) {
+    if (!ignoreTeacherFilter && selectedTeachers.length > 0) {
       if (!selectedTeachers.includes(p.createdById)) {
         return false
       }
@@ -727,7 +729,7 @@ export default function PaymentsPage() {
         }
       }
       
-      const filteredPayments = month.payments.filter(filterPayment)
+      const filteredPayments = month.payments.filter(p => filterPayment(p))
       
       return {
         ...month,
@@ -740,13 +742,33 @@ export default function PaymentsPage() {
     }),
     yearTotal: (() => {
       const allFilteredPayments = data.months.flatMap((m, idx) => 
-        filterMonth(idx) ? m.payments.filter(filterPayment) : []
+        filterMonth(idx) ? m.payments.filter(p => filterPayment(p)) : []
       )
       return {
         totalAmount: allFilteredPayments.reduce((sum, p) => sum + p.amount, 0),
         totalPayments: allFilteredPayments.length,
         uniqueStudents: new Set(allFilteredPayments.map(p => p.studentId)).size
       }
+    })(),
+    // Recalculat aici, nu preluat din API: cel de pe server e pe tot anul și
+    // ignoră filtrele de lună/filială/metodă/sursă
+    teacherStats: (() => {
+      const stats = {}
+      data.months.forEach((m, idx) => {
+        if (!filterMonth(idx)) return
+        m.payments.forEach(p => {
+          // Doar plățile de curs — cele din /learn sunt înregistrate de aplicație, nu de profesor
+          if (p.source !== 'cursuri') return
+          if (!filterPayment(p, { ignoreTeacherFilter: true })) return
+          const id = p.createdById || 'unknown'
+          if (!stats[id]) {
+            stats[id] = { id, name: p.createdByName || 'Administratori', totalAmount: 0, totalPayments: 0 }
+          }
+          stats[id].totalAmount += p.amount
+          stats[id].totalPayments += 1
+        })
+      })
+      return Object.values(stats).sort((a, b) => b.totalAmount - a.totalAmount)
     })()
   } : null
   
@@ -1147,19 +1169,23 @@ export default function PaymentsPage() {
       )}
 
       {/* Teacher Stats - Who created payments / profit per teacher */}
-      {data?.teacherStats && data.teacherStats.length > 0 && (
+      {filteredData?.teacherStats && filteredData.teacherStats.length > 0 && (
         <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-3 xs:p-4 md:p-6 border-b border-gray-100">
             <h2 className="text-sm xs:text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">
               <UserGroupIcon className="w-5 h-5 text-indigo-500" />
               Profit adus de profesori
             </h2>
-            <p className="text-xs text-gray-500 mt-1">Plățile înregistrate de fiecare profesor</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Plățile înregistrate de fiecare profesor • {selectedMonths.length === 0
+                ? `tot anul ${year}`
+                : selectedMonths.map(i => MONTHS[i]).join(', ')}
+            </p>
           </div>
           <div className="p-3 xs:p-4 md:p-6">
             <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 xs:gap-4">
-              {data.teacherStats.map((teacher, idx) => {
-                const maxAmount = data.teacherStats[0]?.totalAmount || 1
+              {filteredData.teacherStats.map((teacher, idx) => {
+                const maxAmount = filteredData.teacherStats[0]?.totalAmount || 1
                 const percentage = Math.round((teacher.totalAmount / maxAmount) * 100)
                 
                 return (

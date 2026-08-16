@@ -3,7 +3,9 @@ import prisma from '@/lib/prisma'
 
 const TELEGRAM_LESSONS_BOT_TOKEN = process.env.TELEGRAM_LESSONS_BOT_TOKEN
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
-const TELEGRAM_LOW_LESSONS_THREAD_ID = process.env.TELEGRAM_LOW_LESSONS_THREAD_ID
+// Raportul de abonamente /learn merge în topicul de plăți.
+// Dacă nu există topic separat, cade pe „Ore rămase" (comportamentul vechi).
+const TELEGRAM_PAYMENTS_THREAD_ID = process.env.TELEGRAM_PAYMENTS_THREAD_ID || process.env.TELEGRAM_LOW_LESSONS_THREAD_ID
 
 async function sendTelegram(message) {
   if (!TELEGRAM_LESSONS_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) {
@@ -17,7 +19,7 @@ async function sendTelegram(message) {
       parse_mode: 'HTML',
       disable_web_page_preview: true,
     }
-    if (TELEGRAM_LOW_LESSONS_THREAD_ID) body.message_thread_id = parseInt(TELEGRAM_LOW_LESSONS_THREAD_ID)
+    if (TELEGRAM_PAYMENTS_THREAD_ID) body.message_thread_id = parseInt(TELEGRAM_PAYMENTS_THREAD_ID)
     const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_LESSONS_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

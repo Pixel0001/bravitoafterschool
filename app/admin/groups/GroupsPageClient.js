@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import DeleteGroupButton from '@/components/admin/DeleteGroupButton'
@@ -61,15 +61,21 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState([])
   const [teachers, setTeachers] = useState([])
   const [branches, setBranches] = useState([])
+  // loading = doar prima încărcare (schelet pe toată pagina)
+  // refreshing = refetch la filtrare (păstrează pagina și focusul pe input)
   const [loading, setLoading] = useState(true)
-  
+  const [refreshing, setRefreshing] = useState(false)
+  const isFirstLoad = useRef(true)
+  const requestId = useRef(0)
+
   // Paginare
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-  
+
   // Filtre
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedTeacher, setSelectedTeacher] = useState('')
   const [selectedDay, setSelectedDay] = useState('')
   const [selectedBranch, setSelectedBranch] = useState('')
@@ -85,20 +91,30 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [currentPage, searchQuery, selectedTeacher, selectedBranch, selectedDay])
+  }, [currentPage, debouncedSearch, selectedTeacher, selectedBranch, selectedDay])
 
   const fetchData = async () => {
-    setLoading(true)
+    // Doar prima încărcare înlocuiește pagina cu spinner-ul;
+    // filtrările ulterioare doar estompează lista, ca să nu se piardă focusul din input
+    if (isFirstLoad.current) setLoading(true)
+    else setRefreshing(true)
+
+    const reqId = ++requestId.current
+
     try {
       const params = new URLSearchParams()
       params.set('page', currentPage.toString())
-      if (searchQuery) params.set('search', searchQuery)
+      if (debouncedSearch) params.set('search', debouncedSearch)
       if (selectedTeacher) params.set('teacherId', selectedTeacher)
       if (selectedBranch) params.set('branchId', selectedBranch)
       if (selectedDay) params.set('day', selectedDay)
 
       const res = await fetch(`/api/admin/groups?${params.toString()}`)
       const data = await res.json()
+
+      // Ignoră răspunsurile venite peste rând (o cerere mai nouă a pornit între timp)
+      if (reqId !== requestId.current) return
+
       setGroups(data.groups || [])
       setTeachers(data.teachers || [])
       setBranches(data.branches || [])
@@ -109,7 +125,11 @@ export default function GroupsPage() {
     } catch (error) {
       console.error('Error fetching groups:', error)
     } finally {
-      setLoading(false)
+      if (reqId === requestId.current) {
+        isFirstLoad.current = false
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
   }
 
@@ -132,6 +152,7 @@ export default function GroupsPage() {
 
   const resetFilters = () => {
     setSearchQuery('')
+    setDebouncedSearch('')
     setSelectedTeacher('')
     setSelectedBranch('')
     setSelectedDay('')
@@ -142,11 +163,12 @@ export default function GroupsPage() {
 
   const hasActiveFilters = searchQuery || selectedTeacher || selectedBranch || selectedDay || dateFilter !== 'all'
 
-  // Debounce search
+  // Debounce search: cererea pleacă abia după ce te oprești din tastat
   useEffect(() => {
     const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
       setCurrentPage(1)
-    }, 300)
+    }, 350)
     return () => clearTimeout(timer)
   }, [searchQuery])
 
@@ -229,7 +251,7 @@ export default function GroupsPage() {
                 <label className="block text-xs font-medium text-gray-700 mb-1">Filială</label>
                 <select
                   value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  onChange={(e) => { setSelectedBranch(e.target.value); setCurrentPage(1) }}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[130px]"
                 >
                   <option value="">Toate filialele</option>
@@ -248,7 +270,7 @@ export default function GroupsPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Profesor</label>
               <select
                 value={selectedTeacher}
-                onChange={(e) => setSelectedTeacher(e.target.value)}
+                onChange={(e) => { setSelectedTeacher(e.target.value); setCurrentPage(1) }}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[150px]"
               >
                 <option value="">Toți profesorii</option>
@@ -265,7 +287,7 @@ export default function GroupsPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Zi săptămână</label>
               <select
                 value={selectedDay}
-                onChange={(e) => setSelectedDay(e.target.value)}
+                onChange={(e) => { setSelectedDay(e.target.value); setCurrentPage(1) }}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[130px]"
               >
                 <option value="">Toate zilele</option>
@@ -322,7 +344,8 @@ export default function GroupsPage() {
         {/* Info rezultate */}
         {hasActiveFilters && (
           <div className="mt-3 pt-3 border-t border-gray-100">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 flex items-center gap-2">
+              {refreshing && <span className="inline-block w-3 h-3 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />}
               {filteredGroups.length} {filteredGroups.length === 1 ? 'grupă găsită' : 'grupe găsite'}
               {dateFilter === 'today' && ` pentru azi (${dayMapping[new Date().getDay()]})`}
               {dateFilter === 'custom' && customDate && ` pentru ${new Date(customDate).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' })}`}
@@ -331,7 +354,7 @@ export default function GroupsPage() {
         )}
       </div>
 
-      <div className="grid gap-3 xs:gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className={`grid gap-3 xs:gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3 transition-opacity duration-150 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>
         {filteredGroups.length === 0 ? (
           <div className="col-span-full bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-8 xs:p-12 text-center text-gray-500 text-sm xs:text-base">
             {hasActiveFilters ? 'Nu există grupe care să corespundă filtrelor.' : 'Nu există grupe. Adaugă prima grupă!'}

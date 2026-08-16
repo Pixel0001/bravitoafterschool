@@ -136,9 +136,9 @@ export default function TeacherSidebar() {
               <Image
                 src="/bravito.png"
                 alt="Bravito After School"
-                width={64}
-                height={22}
-                className="object-contain"
+                width={40}
+                height={40}
+                className="h-9 w-9 shrink-0 rounded-full object-cover"
               />
             </Link>
           </div>
@@ -248,9 +248,9 @@ export default function TeacherSidebar() {
             <Image
               src="/bravito.png"
               alt="Bravito After School"
-              width={64}
-              height={22}
-              className="object-contain"
+              width={40}
+              height={40}
+              className="h-9 w-9 shrink-0 rounded-full object-cover"
             />
           </Link>
           <button
