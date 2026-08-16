@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import DeleteGroupButton from '@/components/admin/DeleteGroupButton'
 import { usePermissions } from '@/hooks/usePermissions'
+import { getDaysFromToday, getTodayName, getTomorrowName, nearestDay, getTimeForDay } from '@/lib/scheduleDays'
 
 // Helper pentru a formata orarul
 const formatSchedule = (scheduleDays, scheduleTime) => {
@@ -68,11 +69,6 @@ export default function GroupsPage() {
   const isFirstLoad = useRef(true)
   const requestId = useRef(0)
 
-  // Paginare
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-
   // Filtre
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -91,7 +87,7 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetchData()
-  }, [currentPage, debouncedSearch, selectedTeacher, selectedBranch, selectedDay])
+  }, [debouncedSearch, selectedTeacher, selectedBranch, selectedDay])
 
   const fetchData = async () => {
     // Doar prima încărcare înlocuiește pagina cu spinner-ul;
@@ -103,7 +99,9 @@ export default function GroupsPage() {
 
     try {
       const params = new URLSearchParams()
-      params.set('page', currentPage.toString())
+      // Luăm toate grupele care corespund filtrelor (nu paginat): altfel
+      // gruparea pe zile ar arăta doar o felie arbitrară din rezultate.
+      params.set('all', 'true')
       if (debouncedSearch) params.set('search', debouncedSearch)
       if (selectedTeacher) params.set('teacherId', selectedTeacher)
       if (selectedBranch) params.set('branchId', selectedBranch)
@@ -118,10 +116,6 @@ export default function GroupsPage() {
       setGroups(data.groups || [])
       setTeachers(data.teachers || [])
       setBranches(data.branches || [])
-      if (data.pagination) {
-        setTotalPages(data.pagination.totalPages)
-        setTotalCount(data.pagination.totalCount)
-      }
     } catch (error) {
       console.error('Error fetching groups:', error)
     } finally {
@@ -158,7 +152,6 @@ export default function GroupsPage() {
     setSelectedDay('')
     setDateFilter('all')
     setCustomDate('')
-    setCurrentPage(1)
   }
 
   const hasActiveFilters = searchQuery || selectedTeacher || selectedBranch || selectedDay || dateFilter !== 'all'
@@ -167,39 +160,69 @@ export default function GroupsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery)
-      setCurrentPage(1)
     }, 350)
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Generare numere pagini
-  const getPageNumbers = () => {
-    const pages = []
-    const maxVisible = 5
-    
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i)
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i)
-        pages.push('...')
-        pages.push(totalPages)
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1)
-        pages.push('...')
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i)
-      } else {
-        pages.push(1)
-        pages.push('...')
-        pages.push(currentPage - 1)
-        pages.push(currentPage)
-        pages.push(currentPage + 1)
-        pages.push('...')
-        pages.push(totalPages)
-      }
+  // Zi specifică vizată de filtre (fie aleasă direct, fie prin "Azi"/dată custom)
+  const effectiveDayName = selectedDay
+    || (dateFilter === 'today' ? dayMapping[new Date().getDay()] : '')
+    || (dateFilter === 'custom' && customDate ? dayMapping[new Date(customDate).getDay()] : '')
+
+  // Grupele, ordonate ca la /orar: azi, mâine, apoi restul zilelor.
+  // Dacă e activ un filtru de zi specifică, arătăm o singură secțiune pentru acea zi.
+  const groupSections = useMemo(() => {
+    const todayName = getTodayName()
+    const tomorrowName = getTomorrowName()
+
+    if (effectiveDayName) {
+      return [{
+        day: effectiveDayName,
+        isToday: effectiveDayName === todayName,
+        isTomorrow: effectiveDayName === tomorrowName,
+        groups: filteredGroups,
+      }]
     }
-    return pages
-  }
+
+    const orderedDays = getDaysFromToday()
+    const buckets = {}
+    orderedDays.forEach(d => { buckets[d] = [] })
+    const noSchedule = []
+
+    filteredGroups.forEach(group => {
+      const day = nearestDay(group.scheduleDays)
+      if (!day || !buckets[day]) {
+        noSchedule.push(group)
+        return
+      }
+      buckets[day].push(group)
+    })
+
+    orderedDays.forEach(day => {
+      buckets[day].sort((a, b) => {
+        const ta = getTimeForDay(a.scheduleTime, day) || ''
+        const tb = getTimeForDay(b.scheduleTime, day) || ''
+        if (!ta) return 1
+        if (!tb) return -1
+        return ta.localeCompare(tb)
+      })
+    })
+
+    const sections = orderedDays
+      .filter(day => buckets[day].length > 0)
+      .map(day => ({
+        day,
+        isToday: day === todayName,
+        isTomorrow: day === tomorrowName,
+        groups: buckets[day],
+      }))
+
+    if (noSchedule.length > 0) {
+      sections.push({ day: 'Fără program stabilit', isToday: false, isTomorrow: false, groups: noSchedule })
+    }
+
+    return sections
+  }, [filteredGroups, effectiveDayName])
 
   if (loading) {
     return (
@@ -251,7 +274,7 @@ export default function GroupsPage() {
                 <label className="block text-xs font-medium text-gray-700 mb-1">Filială</label>
                 <select
                   value={selectedBranch}
-                  onChange={(e) => { setSelectedBranch(e.target.value); setCurrentPage(1) }}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[130px]"
                 >
                   <option value="">Toate filialele</option>
@@ -270,7 +293,7 @@ export default function GroupsPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Profesor</label>
               <select
                 value={selectedTeacher}
-                onChange={(e) => { setSelectedTeacher(e.target.value); setCurrentPage(1) }}
+                onChange={(e) => setSelectedTeacher(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[150px]"
               >
                 <option value="">Toți profesorii</option>
@@ -287,7 +310,7 @@ export default function GroupsPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Zi săptămână</label>
               <select
                 value={selectedDay}
-                onChange={(e) => { setSelectedDay(e.target.value); setCurrentPage(1) }}
+                onChange={(e) => setSelectedDay(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-w-[130px]"
               >
                 <option value="">Toate zilele</option>
@@ -354,135 +377,113 @@ export default function GroupsPage() {
         )}
       </div>
 
-      <div className={`grid gap-3 xs:gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3 transition-opacity duration-150 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>
+      <div className={`space-y-6 xs:space-y-8 transition-opacity duration-150 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>
         {filteredGroups.length === 0 ? (
-          <div className="col-span-full bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-8 xs:p-12 text-center text-gray-500 text-sm xs:text-base">
+          <div className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 p-8 xs:p-12 text-center text-gray-500 text-sm xs:text-base">
             {hasActiveFilters ? 'Nu există grupe care să corespundă filtrelor.' : 'Nu există grupe. Adaugă prima grupă!'}
           </div>
         ) : (
-          filteredGroups.map((group) => (
-            <div key={group.id} className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-3 xs:p-4 md:p-6">
-                <div className="flex items-start justify-between gap-2 mb-3 xs:mb-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm xs:text-base md:text-lg font-semibold text-gray-900 truncate">{group.name}</h3>
-                    <p className="text-xs xs:text-sm text-indigo-600 truncate">{group.course?.title}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className={`inline-flex items-center px-2 xs:px-2.5 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${
-                      group.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {group.active ? 'Activ' : 'Inactiv'}
-                    </span>
-                    {group.branch && (
-                      <span className="inline-flex items-center px-2 xs:px-2.5 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-purple-100 text-purple-800">
-                        {group.branch.name}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 xs:space-y-2 text-xs xs:text-sm">
-                  <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
-                    <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span className="truncate">Profesor: {group.teacher?.name || group.teacher?.email || '-'}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
-                    <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>{group.groupStudents?.length || 0} elevi</span>
-                  </div>
-                  {group.scheduleDays?.length > 0 && (
-                    <div className="flex items-start gap-1.5 xs:gap-2 text-gray-600">
-                      <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="break-words">{formatSchedule(group.scheduleDays, group.scheduleTime)}</span>
-                    </div>
-                  )}
-                  {group.locationType && (
-                    <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
-                      <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      </svg>
-                      <span>{group.locationType === 'online' ? 'Online' : 'Offline'}</span>
-                    </div>
-                  )}
-                </div>
+          groupSections.map(section => (
+            <div key={section.day} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h2 className={`text-base xs:text-lg font-semibold ${
+                  section.isToday ? 'text-indigo-700' : section.isTomorrow ? 'text-amber-700' : 'text-gray-800'
+                }`}>
+                  {section.day}
+                </h2>
+                {section.isToday && (
+                  <span className="px-2 py-0.5 bg-indigo-600 text-white text-xs font-medium rounded-full">Azi</span>
+                )}
+                {section.isTomorrow && (
+                  <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-medium rounded-full">Mâine</span>
+                )}
+                <span className="text-xs xs:text-sm text-gray-500">
+                  ({section.groups.length} {section.groups.length === 1 ? 'grupă' : 'grupe'})
+                </span>
               </div>
+              <div className="grid gap-3 xs:gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {section.groups.map((group) => (
+                  <div key={group.id} className="bg-white rounded-xl xs:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-3 xs:p-4 md:p-6">
+                      <div className="flex items-start justify-between gap-2 mb-3 xs:mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm xs:text-base md:text-lg font-semibold text-gray-900 truncate">{group.name}</h3>
+                          <p className="text-xs xs:text-sm text-indigo-600 truncate">{group.course?.title}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span className={`inline-flex items-center px-2 xs:px-2.5 py-0.5 rounded-full text-[10px] xs:text-xs font-medium ${
+                            group.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {group.active ? 'Activ' : 'Inactiv'}
+                          </span>
+                          {group.branch && (
+                            <span className="inline-flex items-center px-2 xs:px-2.5 py-0.5 rounded-full text-[10px] xs:text-xs font-medium bg-purple-100 text-purple-800">
+                              {group.branch.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-              <div className="px-3 xs:px-4 md:px-6 py-2.5 xs:py-3 bg-gray-50 border-t flex gap-2 xs:gap-3">
-                {canEditGroups && (
-                <Link
-                  href={`/admin/groups/${group.id}`}
-                  className="text-indigo-600 hover:text-indigo-900 text-xs xs:text-sm font-medium"
-                >
-                  Editează
-                </Link>
-                )}
-                {canViewStudents && (
-                <Link
-                  href={`/admin/groups/${group.id}/students`}
-                  className="text-indigo-600 hover:text-indigo-900 text-xs xs:text-sm font-medium"
-                >
-                  Elevi
-                </Link>
-                )}
-                {canDeleteGroups && (
-                <DeleteGroupButton id={group.id} name={group.name} />
-                )}
+                      <div className="space-y-1.5 xs:space-y-2 text-xs xs:text-sm">
+                        <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
+                          <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="truncate">Profesor: {group.teacher?.name || group.teacher?.email || '-'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
+                          <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span>{group.groupStudents?.length || 0} elevi</span>
+                        </div>
+                        {group.scheduleDays?.length > 0 && (
+                          <div className="flex items-start gap-1.5 xs:gap-2 text-gray-600">
+                            <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="break-words">{formatSchedule(group.scheduleDays, group.scheduleTime)}</span>
+                          </div>
+                        )}
+                        {group.locationType && (
+                          <div className="flex items-center gap-1.5 xs:gap-2 text-gray-600">
+                            <svg className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            <span>{group.locationType === 'online' ? 'Online' : 'Offline'}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="px-3 xs:px-4 md:px-6 py-2.5 xs:py-3 bg-gray-50 border-t flex gap-2 xs:gap-3">
+                      {canEditGroups && (
+                      <Link
+                        href={`/admin/groups/${group.id}`}
+                        className="text-indigo-600 hover:text-indigo-900 text-xs xs:text-sm font-medium"
+                      >
+                        Editează
+                      </Link>
+                      )}
+                      {canViewStudents && (
+                      <Link
+                        href={`/admin/groups/${group.id}/students`}
+                        className="text-indigo-600 hover:text-indigo-900 text-xs xs:text-sm font-medium"
+                      >
+                        Elevi
+                      </Link>
+                      )}
+                      {canDeleteGroups && (
+                      <DeleteGroupButton id={group.id} name={group.name} />
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))
         )}
       </div>
-
-      {/* Paginare */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0f2127] rounded-xl border border-[#30919f]/20 px-4 py-3">
-          <div className="text-sm text-[#a0b8bc]">
-            Pagina {currentPage} din {totalPages} ({totalCount} grupe total)
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-[#30919f]/30 text-[#a0b8bc] hover:bg-[#30919f]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              ← Anterior
-            </button>
-            
-            {getPageNumbers().map((pageNum, idx) => (
-              pageNum === '...' ? (
-                <span key={`ellipsis-${idx}`} className="px-2 text-[#a0b8bc]">...</span>
-              ) : (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                    currentPage === pageNum
-                      ? 'bg-[#30919f] text-white'
-                      : 'border border-[#30919f]/30 text-[#a0b8bc] hover:bg-[#30919f]/10'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              )
-            ))}
-            
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-[#30919f]/30 text-[#a0b8bc] hover:bg-[#30919f]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Următor →
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
