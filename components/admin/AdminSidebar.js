@@ -212,9 +212,9 @@ export default function AdminSidebar({ user }) {
             <Image
               src="/bravito.png"
               alt="Bravito After School"
-              width={40}
-              height={40}
-              className="h-9 w-9 shrink-0 rounded-full object-cover"
+              width={44}
+              height={44}
+              className="h-11 w-11 shrink-0 rounded-full object-cover"
             />
           </Link>
         </div>
@@ -315,9 +315,9 @@ export default function AdminSidebar({ user }) {
             <Image
               src="/bravito.png"
               alt="Bravito After School"
-              width={40}
-              height={40}
-              className="h-9 w-9 shrink-0 rounded-full object-cover"
+              width={44}
+              height={44}
+              className="h-11 w-11 shrink-0 rounded-full object-cover"
             />
           </Link>
           <button
