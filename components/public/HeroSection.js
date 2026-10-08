@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
-  LanguageIcon,
   CalculatorIcon,
   AcademicCapIcon,
   SparklesIcon,
@@ -16,7 +15,6 @@ import {
 } from '@heroicons/react/24/outline'
 
 const FALLBACK_COURSES = [
-  { id: 'germana', title: 'Germană', icon: LanguageIcon, color: 'primary' },
   { id: 'engleza', title: 'Engleză', icon: AcademicCapIcon, color: 'accent' },
   { id: 'matematica', title: 'Matematică', icon: CalculatorIcon, color: 'primary' },
   { id: 'franceza', title: 'Franceză', icon: SparklesIcon, color: 'accent' }

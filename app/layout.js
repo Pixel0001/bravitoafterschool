@@ -24,23 +24,19 @@ export const metadata = {
     default: "Bravito After School - Cursuri pentru copii în Chișinău",
     template: "%s | Bravito After School"
   },
-  description: "Bravito After School oferă cursuri de calitate pentru copii în Chișinău: programare, IT, matematică și multe altele. Profesori calificați, grupe mici, primul curs gratuit.",
+  description: "Bravito After School — after school pentru copiii din clasele primare în Chișinău: teme, limbi străine, matematică, grupe de socializare cu kinetoterapie și logopedie. Profesori calificați, grupe mici.",
   keywords: [
     // Ce caută părinții — termeni generali cu volum mare
-    "cursuri calculator copii Chișinău",
-    "cursuri IT copii",
-    "cursuri informatică copii",
-    "cursuri calculator copii",
-    "after school IT Chișinău",
-    "cursuri programare copii Chișinău",
-    "cursuri inteligenta artificiala copii",
-    "cursuri AI copii",
-    "scoala IT copii Moldova",
-    "after school calculator Moldova",
-    "cursuri tehnice copii",
-    "activitati extracurriculare IT copii",
-    "cursuri digitale copii",
-    "educatie digitala copii",
+    "after school Chișinău",
+    "after school clasele primare",
+    "after school copii Chișinău",
+    "pregatirea temelor copii",
+    "cursuri engleza copii Chișinău",
+    "cursuri franceza copii Chișinău",
+    "matematica copii Chișinău",
+    "grupe de socializare copii",
+    "kinetoterapie copii Chișinău",
+    "logopedie copii Chișinău",
     "Bravito After School",
     "cursuri dupa scoala Chisinau"
   ],
@@ -58,7 +54,7 @@ export const metadata = {
   },
   openGraph: {
     title: "Bravito After School - Cursuri pentru copii în Chișinău",
-    description: "Cursuri de calitate pentru copii: programare, IT, matematică. Profesori calificați, grupe mici, primul curs gratuit.",
+    description: "After school pentru copiii din clasele primare: teme, limbi străine, matematică, socializare cu kinetoterapie și logopedie. Grupe mici, profesori calificați.",
     url: "https://bravitoafterschool.md",
     siteName: "Bravito After School",
     locale: "ro_RO",
@@ -75,7 +71,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Bravito After School - Cursuri pentru copii în Chișinău",
-    description: "Cursuri de calitate pentru copii în Chișinău. Programare, IT, matematică. Primul curs gratuit!",
+    description: "After school pentru copiii din clasele primare în Chișinău. Teme, limbi străine, matematică, kinetoterapie și logopedie.",
     images: ["/bravito.png"],
   },
   robots: {

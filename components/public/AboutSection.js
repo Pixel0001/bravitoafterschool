@@ -48,12 +48,12 @@ const VALUES = [
 ]
 
 const HIGHLIGHTS = [
-  'Limbi străine: Engleză, Germană, Franceză (5–16 ani)',
+  'Limbi străine: Engleză, Franceză (5–16 ani)',
   'Matematică și pregătire pentru teste școlare',
   'Lecții individuale și în grupe mici (max 5 elevi)',
   'Profesori calificați cu experiență pedagogică',
   'Program flexibil, adaptat orarului școlar',
-  'Prima lecție gratuită fără niciun angajament'
+  'Grupe de socializare cu kinetoterapie și logopedie inclusă'
 ]
 
 function useCountUp(end, duration = 2000) {
@@ -177,11 +177,12 @@ export default function AboutSection() {
 
               <div className="relative">
                 <Image
-                  src="/platinum_owner.png"
+                  src="/fondatoare.png"
                   alt="Fondatoarea Bravito After School"
-                  width={500}
-                  height={650}
-                  className="w-full max-w-sm mx-auto h-auto object-contain relative z-10"
+                  width={1066}
+                  height={1600}
+                  sizes="(min-width: 1024px) 384px, 90vw"
+                  className="w-full max-w-sm mx-auto h-auto object-cover rounded-[2.5rem] relative z-10"
                   style={{
                     filter: 'drop-shadow(0 25px 50px rgba(48, 145, 159, 0.25))'
                   }}

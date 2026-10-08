@@ -90,7 +90,7 @@ export default function Footer() {
             </Link>
 
             <p className="text-[#9bb3ba] text-sm leading-relaxed mb-6">
-              Programare pentru copii și adolescenți. Python, Web Development, AI și jocuri — învățare gamificată în grupe mici.
+              After school pentru copiii din clasele primare din Chișinău — teme, lecturi, dezvoltare și activități creative în grupe mici, cu profesori dedicați.
             </p>
 
             <div className="flex gap-3">
@@ -131,10 +131,10 @@ export default function Footer() {
             <ul className="space-y-3">
               {courses.length === 0 ? (
                 <>
-                  <li className="text-[#9bb3ba] text-sm">Python pentru copii</li>
-                  <li className="text-[#9bb3ba] text-sm">Web Development</li>
-                  <li className="text-[#9bb3ba] text-sm">Inteligență Artificială</li>
-                  <li className="text-[#9bb3ba] text-sm">Dezvoltare jocuri</li>
+                  <li className="text-[#9bb3ba] text-sm">Engleză</li>
+                  <li className="text-[#9bb3ba] text-sm">Franceză</li>
+                  <li className="text-[#9bb3ba] text-sm">Matematică</li>
+                  <li className="text-[#9bb3ba] text-sm">Socializare, kinetoterapie și logopedie</li>
                 </>
               ) : (
                 courses.map(c => (
@@ -168,13 +168,13 @@ export default function Footer() {
                 <span className="text-[#9bb3ba] text-sm leading-relaxed">Chișinău, Moldova</span>
               </li>
               <li>
-                <a href="tel:+37368113314" className="flex items-start gap-3 text-[#9bb3ba] hover:text-[#f8b316] transition-colors">
+                <a href="tel:+37369352282" className="flex items-start gap-3 text-[#9bb3ba] hover:text-[#f8b316] transition-colors">
                   <PhoneIcon className="w-5 h-5 text-[#30919f] flex-shrink-0 mt-0.5" />
                   <span className="text-sm">+373 69 352 282</span>
                 </a>
               </li>
               <li>
-                <a href="mailto:pyweb.it.academy@gmail.com" className="flex items-start gap-3 text-[#9bb3ba] hover:text-[#f8b316] transition-colors break-all">
+                <a href="mailto:bravito.after.school@gmail.com" className="flex items-start gap-3 text-[#9bb3ba] hover:text-[#f8b316] transition-colors break-all">
                   <EnvelopeIcon className="w-5 h-5 text-[#30919f] flex-shrink-0 mt-0.5" />
                   <span className="text-sm">bravito.after.school@gmail.com</span>
                 </a>

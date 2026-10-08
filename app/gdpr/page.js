@@ -13,7 +13,7 @@ export default function GDPRPage() {
       icon: ShieldCheckIcon,
       content: (
         <p className="text-[#a0b8bc] leading-relaxed">
-          PyWeb Academy respecta dreptul la confiden?ialitate ?i se angajeaza sa protejeze datele cu caracter personal ale copiilor ?i ale parin?ilor/reprezentan?ilor legali, in conformitate cu legisla?ia in vigoare privind protec?ia datelor cu caracter personal (GDPR). Prezenta politica explica modul in care PyWeb Academy colecteaza, utilizeaza, stocheaza ?i protejeaza datele personale.
+          Bravito After School respecta dreptul la confiden?ialitate ?i se angajeaza sa protejeze datele cu caracter personal ale copiilor ?i ale parin?ilor/reprezentan?ilor legali, in conformitate cu legisla?ia in vigoare privind protec?ia datelor cu caracter personal (GDPR). Prezenta politica explica modul in care Bravito After School colecteaza, utilizeaza, stocheaza ?i protejeaza datele personale.
         </p>
       )
     },
@@ -91,7 +91,7 @@ export default function GDPRPage() {
           <ul className="space-y-2 text-[#a0b8bc]">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] mt-2 flex-shrink-0"></span>
-              Inscrierea copilului la programele PyWeb Academy
+              Inscrierea copilului la programele Bravito After School
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] mt-2 flex-shrink-0"></span>
@@ -111,7 +111,7 @@ export default function GDPRPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] mt-2 flex-shrink-0"></span>
-              Promovarea activita?ilor PyWeb Academy (doar cu consim?amant)
+              Promovarea activita?ilor Bravito After School (doar cu consim?amant)
             </li>
           </ul>
         </div>
@@ -151,7 +151,7 @@ export default function GDPRPage() {
       icon: LockClosedIcon,
       content: (
         <div>
-          <p className="text-[#a0b8bc] mb-4">PyWeb Academy:</p>
+          <p className="text-[#a0b8bc] mb-4">Bravito After School:</p>
           <ul className="space-y-2 text-[#a0b8bc]">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] mt-2 flex-shrink-0"></span>
@@ -224,7 +224,7 @@ export default function GDPRPage() {
       icon: CameraIcon,
       content: (
         <p className="text-[#a0b8bc] leading-relaxed">
-          Fotografiile ?i materialele video realizate in cadrul activita?ilor PyWeb Academy pot fi utilizate exclusiv in scop educativ sau de promovare, doar cu acordul scris al parin?ilor/reprezentan?ilor legali.
+          Fotografiile ?i materialele video realizate in cadrul activita?ilor Bravito After School pot fi utilizate exclusiv in scop educativ sau de promovare, doar cu acordul scris al parin?ilor/reprezentan?ilor legali.
         </p>
       )
     },
@@ -234,7 +234,7 @@ export default function GDPRPage() {
       icon: DocumentTextIcon,
       content: (
         <p className="text-[#a0b8bc] leading-relaxed">
-          PyWeb Academy i?i rezerva dreptul de a actualiza prezenta politica. Orice modificare va fi comunicata parin?ilor.
+          Bravito After School i?i rezerva dreptul de a actualiza prezenta politica. Orice modificare va fi comunicata parin?ilor.
         </p>
       )
     }

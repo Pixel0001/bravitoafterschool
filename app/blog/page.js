@@ -6,11 +6,11 @@ import BlogListPage from '@/components/public/BlogListPage'
 export const revalidate = 60
 
 export const metadata = {
-  title: 'Blog - PyWeb Academy',
-  description: 'Articole, sfaturi și resurse despre programare pentru copii, web development și AI.',
+  title: 'Blog - Bravito After School',
+  description: 'Articole, sfaturi și resurse pentru părinții copiilor din clasele primare.',
   openGraph: {
-    title: 'Blog - PyWeb Academy',
-    description: 'Articole, sfaturi și resurse despre programare pentru copii.',
+    title: 'Blog - Bravito After School',
+    description: 'Articole, sfaturi și resurse pentru părinții copiilor din clasele primare.',
   },
 }
 
